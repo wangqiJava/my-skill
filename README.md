@@ -1,2 +1,2 @@
 # my-skill
-用于记录skill学习
+用于记录个人skill学习
