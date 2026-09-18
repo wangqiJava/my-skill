@@ -1,6 +1,6 @@
 # Skill 手记
 
-用 Markdown 记录个人 Skill 学习、使用心得和踩坑过程，使用 VitePress 构建静态网站。
+用 Markdown 记录工作项目里的 AI 协作、可复用 Skill 和 AI 工具，使用 VitePress 构建静态网站。
 
 ## 本地开发
 
@@ -15,11 +15,13 @@ npm run docs:dev
 
 ## 内容目录
 
-- `docs/skills/`：Skill 使用心得。
-- `docs/pitfalls/`：踩坑与解决办法。
-- `docs/templates/skill-note.md`：可复制的心得模板。
+- `docs/projects/`：工作项目总览与项目 Skill。
+- `docs/skills/`：通用 Skill。
+- `docs/tools/`：AI 工具。
+- `docs/templates/skill-note.md`：记录模板。
 - `docs/guide/writing.md`：新增文章、插图和导航维护指南。
-- `docs/.vitepress/config.mjs`：网站标题、中文导航和本地搜索配置。
+- `docs/.vitepress/`：站点主题、中文导航和本地搜索。
+- `docs/pitfalls/`：旧栏目，不再作为主导航。
 
 新增文章后，请在对应分类的 `index.md` 添加链接；需要展示在侧边栏时，再修改网站配置。
 

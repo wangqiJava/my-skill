@@ -3,41 +3,65 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   lang: 'zh-CN',
   title: 'Skill 手记',
-  description: '记录 Skill 的实际用法、使用心得与踩坑过程。',
+  description: '记录工作项目里的 Skill 用法、可复用 Skill 和 AI 工具。',
   base: '/',
   cleanUrls: false,
+  appearance: 'dark',
+  markdown: {
+    theme: {
+      light: 'github-light',
+      dark: 'github-light'
+    }
+  },
+  head: [
+    ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+    ['link', {
+      rel: 'stylesheet',
+      href: 'https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap'
+    }]
+  ],
   themeConfig: {
     nav: [
-      { text: '使用心得', link: '/skills/' },
-      { text: '踩坑记录', link: '/pitfalls/' },
-      { text: '记录模板', link: '/templates/skill-note' },
-      { text: '写作指南', link: '/guide/writing' }
+      { text: '工作项目', link: '/projects/' },
+      { text: 'Skill 记录', link: '/skills/' },
+      { text: 'AI 工具', link: '/tools/' }
     ],
     sidebar: [
       {
-        text: '学习与实践',
+        text: '工作项目',
         items: [
-          { text: '使用心得', link: '/skills/' },
-          { text: '踩坑记录', link: '/pitfalls/' }
+          { text: '目录', link: '/projects/' },
+          { text: '冲融', link: '/projects/chongrong' }
         ]
       },
       {
-        text: '开始记录',
+        text: 'Skill 记录',
         items: [
-          { text: '心得记录模板', link: '/templates/skill-note' },
-          { text: '写作指南', link: '/guide/writing' }
+          { text: '目录', link: '/skills/' },
+          { text: 'grill-me', link: '/skills/grill-me' }
+        ]
+      },
+      {
+        text: 'AI 工具',
+        items: [
+          { text: '目录', link: '/tools/' }
+        ]
+      },
+      {
+        text: '说明',
+        items: [
+          { text: '写作指南', link: '/guide/writing' },
+          { text: '记录模板', link: '/templates/skill-note' }
         ]
       }
     ],
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/wangqiJava/my-skill' }
-    ],
+    socialLinks: [],
     search: {
       provider: 'local',
       options: {
         miniSearch: {
           options: {
-            // 同时保留完整词串与中文分词，兼容浏览器端的默认查询分词。
             tokenize: (text) => Array.from(new Set([
               ...text.split(/[\s\p{P}]+/u),
               ...Array.from(
@@ -66,9 +90,9 @@ export default defineConfig({
     docFooter: { prev: '上一篇', next: '下一篇' },
     returnToTopLabel: '回到顶部',
     sidebarMenuLabel: '目录',
-    darkModeSwitchLabel: '外观',
-    lightModeSwitchTitle: '切换到浅色模式',
-    darkModeSwitchTitle: '切换到深色模式',
-    footer: { message: '从一次实践开始，把经验留给下一次。' }
+    darkModeSwitchLabel: '阴阳',
+    lightModeSwitchTitle: '切到阳面（浅色）',
+    darkModeSwitchTitle: '切到阴面（深色）',
+    footer: { message: '用过再记下，下次能找回来。' }
   }
 })
