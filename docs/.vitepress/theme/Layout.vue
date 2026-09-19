@@ -1,13 +1,25 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme'
-import { inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useData, useRoute } from 'vitepress'
+import { inject, onMounted, onUnmounted } from 'vue'
+import { useData } from 'vitepress'
 
 const { Layout } = DefaultTheme
-const route = useRoute()
-const { isDark } = useData()
-const gateOpen = ref(false)
-const gateGone = ref(false)
+const { isDark, page } = useData()
+
+const pagePetals = [
+  { left: '5%', size: '5px', duration: '24s', delay: '-9s', sway: '7s' },
+  { left: '13%', size: '4px', duration: '21s', delay: '-17s', sway: '9s' },
+  { left: '23%', size: '6px', duration: '28s', delay: '-3s', sway: '8s' },
+  { left: '32%', size: '4px', duration: '23s', delay: '-13s', sway: '10s' },
+  { left: '41%', size: '5px', duration: '26s', delay: '-21s', sway: '7s' },
+  { left: '49%', size: '4px', duration: '19s', delay: '-6s', sway: '9s' },
+  { left: '58%', size: '6px', duration: '25s', delay: '-16s', sway: '8s' },
+  { left: '66%', size: '4px', duration: '22s', delay: '-2s', sway: '10s' },
+  { left: '75%', size: '5px', duration: '27s', delay: '-11s', sway: '7s' },
+  { left: '83%', size: '4px', duration: '18s', delay: '-14s', sway: '9s' },
+  { left: '91%', size: '6px', duration: '24s', delay: '-4s', sway: '8s' },
+  { left: '97%', size: '4px', duration: '28s', delay: '-23s', sway: '10s' }
+]
 
 const toggleAppearance = inject('toggle-appearance', () => {
   isDark.value = !isDark.value
@@ -35,54 +47,37 @@ function onKeydown(event) {
   }
 }
 
-function replayUnroll() {
-  const root = document.documentElement
-  root.classList.remove('is-unrolling')
-  void root.offsetWidth
-  root.classList.add('is-unrolling')
-}
-
-function prefersReducedMotion() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
 onMounted(() => {
   applyShift()
   window.addEventListener('keydown', onKeydown)
-
-  if (prefersReducedMotion()) {
-    gateGone.value = true
-    replayUnroll()
-    return
-  }
-
-  const root = document.documentElement
-  root.classList.add('is-page-unrolling')
-  nextTick(() => {
-    replayUnroll()
-    window.setTimeout(() => {
-      gateOpen.value = true
-    }, 220)
-  })
-  window.setTimeout(() => {
-    gateGone.value = true
-    root.classList.remove('is-page-unrolling')
-  }, 2250)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
 })
 
-watch(() => route.path, () => {
-  nextTick(() => replayUnroll())
-})
 </script>
 
 <template>
   <Layout class="station-shell">
+    <template #layout-bottom>
+      <div v-if="page.isNotFound || page.relativePath !== 'index.md'" class="page-plum-fall" aria-hidden="true">
+        <span
+          v-for="(petal, index) in pagePetals"
+          :key="index"
+          class="page-plum-track"
+          :style="{
+            left: petal.left,
+            '--petal-size': petal.size,
+            '--fall-duration': petal.duration,
+            '--fall-delay': petal.delay,
+            '--sway-duration': petal.sway
+          }"
+        ><span class="page-plum-petal" /></span>
+      </div>
+    </template>
     <template #nav-bar-title-after>
-      <span class="station-led" aria-hidden="true"></span>
+      <span class="station-led" aria-hidden="true">记</span>
     </template>
     <template #nav-bar-content-after>
       <button
@@ -93,18 +88,8 @@ watch(() => route.path, () => {
         :title="isDark ? '切到阳面（浅色）' : '切到阴面（深色）'"
         @click="toggleAppearance"
       >
-        {{ isDark ? '阴' : '阳' }}
+        <span class="yin-yang-mark">{{ isDark ? '阴' : '阳' }}</span>
       </button>
     </template>
   </Layout>
-  <div
-    class="page-gate"
-    :class="{ 'is-open': gateOpen, 'is-gone': gateGone }"
-    aria-hidden="true"
-  >
-    <div class="page-gate-scroll">
-      <span class="page-gate-rod page-gate-rod-l"></span>
-      <span class="page-gate-rod page-gate-rod-r"></span>
-    </div>
-  </div>
 </template>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>手记</title>
+  <path fill="#C43A3A" d="M4 3 31 2 60 4 62 31 60 61 33 62 3 60 2 32Z"/>
+  <path stroke="#F5F0E6" stroke-opacity=".8" stroke-width="1.5" d="M7 7 32 6 57 8 58 32 56 57 32 58 7 56 6 32Z"/>
+  <g fill="#F5F0E6">
+    <path d="M16 15Q20 16 24 21L21 25Q18 21 14 19Z"/>
+    <path d="M11 28 23 27 23 45 28 41 30 44 20 54 18 51 18 32 11 32Z"/>
+    <path d="M30 16 51 16 51 35 35 35 35 46Q35 49 39 49L47 49Q50 49 50 42L55 44Q55 54 48 54L38 54Q30 54 30 47L30 30 46 30 46 21 30 21Z"/>
+  </g>
+</svg>

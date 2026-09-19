@@ -1,7 +1,7 @@
 ---
 layout: page
 sidebar: false
-title: Skill 手记
+title: 拾墨手记
 ---
 
 <HomeWorkbench />

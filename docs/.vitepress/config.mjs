@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   lang: 'zh-CN',
-  title: 'Skill 手记',
+  title: '拾墨手记',
   description: '记录工作项目里的 Skill 用法、可复用 Skill 和 AI 工具。',
   base: '/',
   cleanUrls: false,
@@ -14,18 +14,24 @@ export default defineConfig({
     }
   },
   head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
     ['link', {
       rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap'
+      href: 'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/lxgwwenkai-regular.css'
+    }],
+    ['link', {
+      rel: 'stylesheet',
+      href: 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap'
     }]
   ],
   themeConfig: {
+    siteTitle: '拾墨手记',
     nav: [
       { text: '工作项目', link: '/projects/' },
       { text: 'Skill 记录', link: '/skills/' },
-      { text: 'AI 工具', link: '/tools/' }
+      { text: '工具', link: '/tools/' }
     ],
     sidebar: [
       {
