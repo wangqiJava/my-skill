@@ -1,10 +1,14 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme'
-import { inject, onMounted, onUnmounted } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useData } from 'vitepress'
 
 const { Layout } = DefaultTheme
 const { isDark, page } = useData()
+const appearanceButton = ref(null)
+let appearanceElement
+let appearanceTransition
+let switchingAppearance = false
 
 const pagePetals = [
   { left: '5%', size: '5px', duration: '24s', delay: '-9s', sway: '7s' },
@@ -21,9 +25,52 @@ const pagePetals = [
   { left: '97%', size: '4px', duration: '28s', delay: '-23s', sway: '10s' }
 ]
 
-const toggleAppearance = inject('toggle-appearance', () => {
-  isDark.value = !isDark.value
-})
+async function toggleAppearance() {
+  if (switchingAppearance) return
+  switchingAppearance = true
+
+  const root = document.documentElement
+  const nextDark = !isDark.value
+  const updateAppearance = async () => {
+    isDark.value = nextDark
+    await nextTick()
+  }
+
+  root.classList.add('theme-revealing')
+
+  try {
+    if (!document.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      await updateAppearance()
+      getComputedStyle(root).color
+      return
+    }
+
+    const mark = appearanceElement.querySelector('.yin-yang-mark') || appearanceElement
+    const rect = mark.getBoundingClientRect()
+    const x = rect.left + rect.width / 2
+    const y = rect.top + rect.height / 2
+    const radius = Math.ceil(Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    )) + 1
+
+    root.style.setProperty('--theme-reveal-x', `${x}px`)
+    root.style.setProperty('--theme-reveal-y', `${y}px`)
+    root.style.setProperty('--theme-reveal-radius', `${radius}px`)
+    appearanceTransition = document.startViewTransition(updateAppearance)
+    await Promise.all([appearanceTransition.ready, appearanceTransition.finished])
+  } catch {
+    await updateAppearance()
+    getComputedStyle(root).color
+  } finally {
+    root.classList.remove('theme-revealing')
+    root.style.removeProperty('--theme-reveal-x')
+    root.style.removeProperty('--theme-reveal-y')
+    root.style.removeProperty('--theme-reveal-radius')
+    appearanceTransition = null
+    switchingAppearance = false
+  }
+}
 
 function applyShift() {
   const hour = new Date().getHours()
@@ -49,17 +96,21 @@ function onKeydown(event) {
 
 onMounted(() => {
   applyShift()
+  appearanceElement = appearanceButton.value
+  appearanceElement?.addEventListener('click', toggleAppearance)
   window.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
+  appearanceElement?.removeEventListener('click', toggleAppearance)
+  appearanceTransition?.skipTransition()
   window.removeEventListener('keydown', onKeydown)
 })
 
 </script>
 
 <template>
-  <Layout class="station-shell">
+  <Layout class="station-shell" :class="{ 'station-home': !page.isNotFound && page.relativePath === 'index.md' }">
     <template #layout-bottom>
       <div v-if="page.isNotFound || page.relativePath !== 'index.md'" class="page-plum-fall" aria-hidden="true">
         <span
@@ -81,12 +132,12 @@ onUnmounted(() => {
     </template>
     <template #nav-bar-content-after>
       <button
+        ref="appearanceButton"
         type="button"
         class="yin-yang"
         :aria-pressed="isDark"
         :aria-label="isDark ? '切到阳面（浅色）' : '切到阴面（深色）'"
         :title="isDark ? '切到阳面（浅色）' : '切到阴面（深色）'"
-        @click="toggleAppearance"
       >
         <span class="yin-yang-mark">{{ isDark ? '阴' : '阳' }}</span>
       </button>

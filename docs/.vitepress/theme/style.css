@@ -23,9 +23,9 @@
   --text-3: #71695e;
   --sheet: #faf7f0;
   --card-fill: transparent;
-  --card-hover: rgb(44 44 44 / 1.5%);
   --card-ink: #3a3a3a;
   --card-line: rgb(44 44 44 / 10%);
+  --card-shadow: rgb(105 66 40 / 10%);
   --title-ink: #3a3a3a;
   --title-bleed: rgb(44 44 44 / 12%);
   --paper-shadow: rgb(65 51 30 / 7%);
@@ -66,9 +66,9 @@ html.dark {
   --text-3: #a6a29a;
   --sheet: #232323;
   --card-fill: rgb(255 255 255 / 3%);
-  --card-hover: rgb(255 255 255 / 6%);
   --card-ink: var(--text);
   --card-line: rgb(232 228 217 / 10%);
+  --card-shadow: rgb(130 76 48 / 16%);
   --title-ink: var(--text);
   --title-bleed: rgb(232 228 217 / 8%);
   --paper-shadow: rgb(0 0 0 / 15%);
@@ -226,6 +226,25 @@ body {
   background: transparent;
 }
 
+.station-home .VPNavBarSearch .DocSearch-Button::after {
+  background: var(--text-3);
+  opacity: 0.45;
+  transform: scaleX(0.55);
+  transform-origin: center;
+  transition:
+    transform 520ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    background-color 220ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.station-home .VPNavBarSearch .DocSearch-Button:hover::after,
+.station-home .VPNavBarSearch .DocSearch-Button:focus-visible::after {
+  background: var(--zhu);
+  opacity: 0.9;
+  transform: scaleX(1);
+  transition-delay: 0ms, 300ms, 0ms;
+}
+
 .VPNavBarSearch .DocSearch-Button-Container {
   flex: 1;
 }
@@ -343,6 +362,35 @@ html .VPLocalSearchBox .shell {
   outline-offset: 2px;
 }
 
+/* 阴阳切换：旧画面托底，新画面从印章处晕开。 */
+html.theme-revealing,
+html.theme-revealing *,
+html.theme-revealing *::before,
+html.theme-revealing *::after {
+  transition: none !important;
+}
+
+html.theme-revealing::view-transition-group(root),
+html.theme-revealing::view-transition-old(root),
+html.theme-revealing::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.theme-revealing::view-transition-old(root) {
+  z-index: 1;
+}
+
+html.theme-revealing::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-ink-reveal 520ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes theme-ink-reveal {
+  from { clip-path: circle(0px at var(--theme-reveal-x) var(--theme-reveal-y)); }
+  to { clip-path: circle(var(--theme-reveal-radius) at var(--theme-reveal-x) var(--theme-reveal-y)); }
+}
+
 /* 非主页落梅：匀速下落与横向轻摆分层，避免摆动时停在半空。 */
 .page-plum-fall {
   --page-petal-color: #934c4a;
@@ -406,9 +454,18 @@ html.dark .page-plum-fall {
 /* ---------- 首页 ---------- */
 .stage {
   position: relative;
+  isolation: isolate;
   max-width: 1120px;
   margin: 0 auto;
   padding: 52px 24px 16px;
+}
+
+.landscape-parallax {
+  transition: transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.landscape-parallax {
+  transform: translate(var(--mountain-shift-x, 0px), var(--mountain-shift-y, 0px));
 }
 
 .stage-head {
@@ -417,49 +474,55 @@ html.dark .page-plum-fall {
   justify-content: flex-end;
   gap: 44px;
   align-items: start;
-  min-height: 310px;
+  min-height: max(310px, calc(25vw - 120px));
   padding-right: 340px;
 }
 
-/* 边角小景：近梅由画外入，远山淡入纸色，疏水承接留白。 */
+/* 半幅横卷：近梅斜出，远山横陈；水与雾在纸上留白。 */
 .landscape-scene {
-  --petal-fall: clamp(90px, 16vw, 150px);
-  --ripple-distance: 7.2222px; /* SVG 520 单位缩至 360px，画面位移约 5px。 */
+  --ripple-distance: 14px;
   position: absolute;
-  top: 20px;
-  right: 0;
-  width: 360px;
-  aspect-ratio: 13 / 10;
+  top: -20px;
+  right: var(--scene-edge-offset, 0px);
+  width: 50vw;
+  aspect-ratio: 2 / 1;
   overflow: visible;
   user-select: none;
 }
 
 .plum-art {
-  --plum-ink: var(--mo-soft);
-  --plum-petal: #934c4a;
-  --plum-wash: #b88a7b;
-  --plum-detail: #7e3d3c;
-  --plum-pollen: #68594b;
-  --landscape-ink: #d4ccc0;
+  --mountain-far-ink: #bab4a8;
+  --mountain-middle-ink: #9e9c91;
+  --mountain-near-ink: #85877d;
   --water-ink: #887f73;
+  --bird-ink: #55574c;
   --mist-color: var(--shell);
-  --mist-opacity: 0.9;
+  --mist-opacity: 0.48;
   display: block;
   width: 100%;
   height: auto;
-  overflow: visible;
+  overflow: hidden;
   pointer-events: none;
   user-select: none;
 }
 
+/* The landscape remains inline; the detailed plum is loaded as a separate image. */
+.stage .plum-art path,
+.stage .plum-art line {
+  stroke: none;
+}
+
+.stage .plum-art .landscape-water > path {
+  stroke: url(#home-water-ink);
+}
+
 html.dark .plum-art {
-  --plum-ink: var(--text-2);
-  --plum-petal: #9e625e;
-  --plum-wash: #956f67;
-  --plum-detail: #86504c;
-  --plum-pollen: #b7a392;
-  --landscape-ink: #262626;
-  --water-ink: #858b86;
+  --mountain-far-ink: #505853;
+  --mountain-middle-ink: #606b62;
+  --mountain-near-ink: #788071;
+  --water-ink: #939989;
+  --bird-ink: #aaa995;
+  --mist-opacity: 0.38;
 }
 
 .landscape-water-ink {
@@ -483,247 +546,183 @@ html.dark .plum-art {
 }
 
 .landscape-mountains {
-  fill: var(--landscape-ink);
+  opacity: 0.8;
+  transform: translateY(55px) scale(1, 0.82);
 }
 
 .mountain-far {
+  fill: var(--mountain-far-ink);
   opacity: 0.65;
 }
 
 .mountain-middle {
+  fill: var(--mountain-middle-ink);
   opacity: 0.85;
 }
 
 .mountain-near {
+  fill: var(--mountain-near-ink);
   opacity: 0.9;
 }
 
 .landscape-water {
-  stroke-width: 0.65;
+  stroke-width: 0.85;
   stroke-linecap: round;
-  opacity: 0.35;
+  opacity: 0.46;
 }
 
 .landscape-water > path {
   --ripple-delay: 0s;
   --ripple-direction: 1;
+  --ripple-duration: 14s;
   vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
   opacity: 0.75;
 }
 
 .landscape-water > path:nth-child(2) {
-  --ripple-delay: -2s;
+  --ripple-delay: -4s;
   --ripple-direction: -1;
+  --ripple-duration: 17s;
 }
 
 .landscape-water > path:nth-child(3) {
-  --ripple-delay: -4s;
+  --ripple-delay: -8s;
+  --ripple-duration: 16s;
 }
 
 .landscape-water > path:nth-child(4) {
   --ripple-delay: -6s;
   --ripple-direction: -1;
+  --ripple-duration: 19s;
+}
+
+.landscape-birds {
+  fill: var(--bird-ink);
+}
+
+.landscape-bird {
+  --bird-delay: 0s;
+  opacity: 0;
+}
+
+.landscape-bird-follower {
+  --bird-delay: 1.6s;
+}
+
+.landscape-bird-wings {
+  transform-origin: 0 0;
+}
+
+.stage.has-atmosphere .landscape-bird {
+  animation: bird-flight 32s cubic-bezier(0.25, 0.46, 0.45, 0.94) var(--bird-delay) infinite;
+}
+
+.stage.has-atmosphere .landscape-bird-wings {
+  animation: bird-wings 3.6s ease-out var(--bird-delay) infinite;
+}
+
+@keyframes bird-flight {
+  0% { transform: translate(0, 6px); opacity: 0; }
+  10% { opacity: 0.72; }
+  34% { transform: translate(98px, -12px); opacity: 0.62; }
+  58% { transform: translate(178px, -24px); opacity: 0; }
+  100% { transform: translate(178px, -24px); opacity: 0; }
+}
+
+@keyframes bird-wings {
+  0%, 48%, 100% { transform: scaleY(0.85) rotate(-3deg); }
+  18% { transform: scaleY(0.3) rotate(2deg); }
+  32% { transform: scaleY(1) rotate(-2deg); }
+  72% { transform: scaleY(0.7) rotate(0deg); }
 }
 
 .stage.is-in .landscape-wash {
-  animation: ink-in 2400ms ease-out 200ms both;
+  animation: ink-in 3000ms ease-out 150ms both;
 }
 
-.plum-bough {
-  transform-box: view-box;
-  transform-origin: 100% 54.5%;
-  transform: rotate(-0.8deg);
-  transition: filter 1400ms ease-in-out;
-}
-
-.landscape-mountains {
-  transition: filter 1400ms ease-in-out;
-}
-
-.stage.is-in .plum-bough {
-  animation: plum-sway 7s ease-in-out 7.6s infinite;
-}
-
-.stage.is-in .landscape-mist-breath {
-  animation: mist-breathe 12s ease-in-out infinite;
-}
-
-.stage.is-in .landscape-water > path {
-  animation: water-ripple 8s ease-in-out var(--ripple-delay) infinite;
-}
-
-.falling-petal {
+/* Only the brush masks and flower groups animate; the source texture stays still. */
+.plum-picture {
   position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: var(--zhu);
+  top: clamp(8px, 1.25vw, 24px);
+  right: 0;
+  width: 60%;
   pointer-events: none;
-  opacity: 0;
 }
 
-.falling-petal-one {
-  left: 58%;
-  top: 16.5%;
-  --petal-delay: 8s;
+.plum-preload {
+  display: none;
 }
 
-.falling-petal-two {
-  left: 35.2%;
-  top: 34.8%;
-  --petal-delay: 12s;
+.plum-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform: scaleX(-1);
+  filter: saturate(0.48) contrast(0.94);
+  opacity: 0.88;
 }
 
-.falling-petal-three {
-  left: 81.2%;
-  top: 20.8%;
-  --petal-delay: 16s;
+html.dark .plum-illustration {
+  filter: none;
+  opacity: 0.9;
 }
 
-.stage.is-in .falling-petal {
-  animation: petal-drift 12s linear var(--petal-delay) infinite;
-}
-
-@keyframes plum-sway {
-  0%, 100% { transform: rotate(-0.8deg); }
-  50% { transform: rotate(0.8deg); }
-}
-
-@keyframes mist-breathe {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 0.85; }
-}
-
-@keyframes water-ripple {
-  0%, 100% { transform: translateX(0); opacity: 0.75; }
-  50% { transform: translateX(calc(var(--ripple-distance) * var(--ripple-direction))); opacity: 1; }
-}
-
-@keyframes petal-drift {
-  0% { opacity: 1; transform: translate(0, 0); }
-  40% { opacity: 0.6; transform: translate(-9px, calc(var(--petal-fall) * 0.4)); }
-  75% { opacity: 0.25; transform: translate(4px, calc(var(--petal-fall) * 0.75)); }
-  100% { opacity: 0; transform: translate(-16px, var(--petal-fall)); }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .landscape-scene:hover .plum-bough {
-    filter: brightness(1.15);
-  }
-
-  .landscape-scene:hover .landscape-mountains {
-    filter: brightness(0.9);
-  }
-}
-
-.plum-trunk {
-  fill: var(--plum-ink);
-  fill-opacity: 0.85;
-}
-
-.plum-bark {
-  stroke: var(--shell);
-  stroke-width: 0.85;
-  stroke-opacity: 0.55;
-  stroke-linecap: round;
-}
-
-.plum-bark-fine {
-  stroke-width: 0.65;
-}
-
-.plum-knots {
-  stroke: var(--plum-ink);
-  stroke-width: 2.3;
-  stroke-linecap: round;
-  stroke-opacity: 0.7;
-}
-
-.plum-growth {
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
+.plum-brush-reveal {
+  fill: none;
+  stroke: white;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  visibility: hidden;
+}
+
+.plum-flower-cluster {
   opacity: 0;
 }
 
-.plum-twig {
-  stroke: var(--plum-ink);
-  stroke-opacity: 0.72;
+.stage.is-in .plum-illustration.is-loaded .plum-brush-reveal {
+  animation: plum-brush-grow var(--grow-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) var(--grow-delay) forwards;
 }
 
-.plum-bud,
-.plum-flower,
-.plum-flower-bud {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
+.stage.is-in .plum-illustration.is-loaded .plum-flower-cluster {
+  animation: plum-bloom 1800ms ease-out var(--bloom-delay) both;
 }
 
-.plum-bud-petal,
-.plum-flower-bud {
-  fill: var(--plum-detail);
-  fill-opacity: 0.8;
-}
-
-.plum-calyx {
-  stroke: var(--plum-ink);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-
-.plum-petal {
-  fill: var(--plum-petal);
-  fill-opacity: 0.8;
-  stroke: var(--plum-detail);
-  stroke-opacity: 0.5;
-  stroke-width: 0.65;
-}
-
-.plum-petal:nth-child(2n) {
-  fill: var(--plum-wash);
-  fill-opacity: 0.5;
-}
-
-.plum-stamen {
-  stroke: var(--plum-pollen);
-  stroke-width: 0.75;
-  stroke-linecap: round;
-}
-
-.plum-pollen {
-  fill: var(--plum-pollen);
-}
-
-.plum-flower-heart {
-  fill: var(--plum-detail);
-}
-
-.stage.is-in .plum-growth {
-  animation: plum-grow var(--grow-duration) linear var(--grow-delay) both;
-}
-
-.stage.is-in .plum-bud {
-  animation: plum-bloom 900ms ease-out var(--bloom-delay) both;
-}
-
-.stage.is-in .plum-flower-bud {
-  animation: plum-bloom 700ms ease-out calc(var(--bloom-delay) - 0.6s) both;
-}
-
-.stage.is-in .plum-flower {
-  animation: plum-bloom 1800ms cubic-bezier(0.22, 0.61, 0.36, 1) var(--bloom-delay) both;
-}
-
-@keyframes plum-grow {
-  0% { stroke-dashoffset: 100; opacity: 0; }
-  2% { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 1; }
+@keyframes plum-brush-grow {
+  from { stroke-dashoffset: 1; visibility: visible; }
+  to { stroke-dashoffset: 0; visibility: visible; }
 }
 
 @keyframes plum-bloom {
-  from { opacity: 0; transform: scale(0.15) rotate(-12deg); }
-  to { opacity: 1; transform: scale(1) rotate(0deg); }
+  0% { opacity: 0; }
+  35% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+.landscape-mist-breath {
+  opacity: 0.6;
+}
+
+.stage.has-atmosphere .landscape-mist-breath {
+  animation: mist-breathe 24s ease-out 1;
+}
+
+.stage.has-atmosphere .landscape-water > path {
+  animation: water-ripple var(--ripple-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) var(--ripple-delay) infinite;
+}
+
+@keyframes mist-breathe {
+  0%, 100% { transform: translate(0, 0); opacity: 0.6; }
+  45% { transform: translate(-4px, -1px); opacity: 0.7; }
+  72% { transform: translate(-2px, 0); opacity: 0.64; }
+}
+
+@keyframes water-ripple {
+  0%, 100% { transform: translate(0, 0) scaleX(0.98); opacity: 0.58; }
+  50% { transform: translate(calc(var(--ripple-distance) * var(--ripple-direction)), 1.5px) scaleX(1.025); opacity: 1; }
 }
 
 .brush-col {
@@ -751,6 +750,8 @@ html.dark .plum-art {
 .brush-mark > span {
   display: block;
   white-space: nowrap;
+  opacity: 0;
+  clip-path: inset(0 0 100% 0);
 }
 
 .kicker-col {
@@ -789,6 +790,26 @@ html.dark .plum-art {
   font-size: 12px;
   letter-spacing: 0.08em;
   transform: rotate(6deg);
+}
+
+.stage-head .seal {
+  scale: 1;
+  filter: drop-shadow(0 0 0 rgb(196 58 58 / 0%));
+  transition:
+    scale 220ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 220ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.stage-head .seal:hover {
+  scale: 0.95;
+  filter: drop-shadow(0 2px 3px rgb(196 58 58 / 22%));
+  animation: hero-seal-press 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes hero-seal-press {
+  0% { scale: 1; }
+  40% { scale: 1.1; }
+  100% { scale: 0.95; }
 }
 
 .stage-copy {
@@ -874,7 +895,9 @@ html.dark .plum-art {
 
 .slip {
   --lift: 0px;
+  --slip-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: minmax(190px, 1fr) auto auto;
@@ -892,17 +915,93 @@ html.dark .plum-art {
   box-shadow: none;
   transform: translateY(var(--lift));
   transition:
-    transform 420ms ease,
-    background 420ms ease,
-    border-color 420ms ease;
+    transform 420ms var(--slip-ease),
+    box-shadow 420ms var(--slip-ease);
   opacity: 0;
+}
+
+.slip-aura {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  clip-path: inset(0);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+.slip-aura::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 110%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200, 80, 60, 0.03) 0%, rgba(200, 80, 60, 0) 70%);
+  filter: none;
+  transform: translate(-50%, -35%);
+}
+
+html.dark .slip-aura::before {
+  background: radial-gradient(circle, rgba(232, 228, 217, 0.045) 0%, rgba(232, 228, 217, 0) 70%);
+}
+
+.slip:hover .slip-aura,
+.slip:focus-visible .slip-aura {
+  opacity: 1;
+}
+
+.slip::before,
+.slip::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border: 0 solid var(--zhu);
+  opacity: 0;
+}
+
+.slip::before {
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.slip::after {
+  border-bottom-width: 1px;
+  border-left-width: 1px;
 }
 
 .slip:hover,
 .slip:focus-visible {
   --lift: -4px;
-  background: var(--card-hover);
   border-color: var(--card-line);
+  box-shadow: 0 12px 28px -8px var(--card-shadow);
+}
+
+.slip:hover::before,
+.slip:focus-visible::before {
+  opacity: 1;
+  animation: slip-border-start 420ms var(--slip-ease) both;
+}
+
+.slip:hover::after,
+.slip:focus-visible::after {
+  opacity: 1;
+  animation: slip-border-finish 420ms var(--slip-ease) 420ms both;
+}
+
+@keyframes slip-border-start {
+  0% { clip-path: inset(0 100% 100% 0); }
+  50% { clip-path: inset(0 0 calc(100% - 1px) 0); }
+  100% { clip-path: inset(0); }
+}
+
+@keyframes slip-border-finish {
+  0% { clip-path: inset(100% 0 0 100%); }
+  50% { clip-path: inset(calc(100% - 1px) 0 0 0); }
+  100% { clip-path: inset(0); }
 }
 
 .slip:focus-visible {
@@ -947,6 +1046,19 @@ html.dark .plum-art {
   color: var(--card-ink);
 }
 
+.slip-duty,
+.slip-latest {
+  opacity: 0.5;
+  transition: opacity 420ms var(--slip-ease);
+}
+
+.slip:hover .slip-duty,
+.slip:hover .slip-latest,
+.slip:focus-visible .slip-duty,
+.slip:focus-visible .slip-latest {
+  opacity: 1;
+}
+
 .slip-seal {
   position: absolute;
   left: 28px;
@@ -959,6 +1071,20 @@ html.dark .plum-art {
   background: var(--xuan);
   box-shadow: inset 0 0 0 1px var(--zhu);
   transform: rotate(-4deg);
+  filter: drop-shadow(0 0 0 rgb(196 58 58 / 0%));
+  transition: filter 420ms var(--slip-ease);
+}
+
+.slip:hover .slip-seal,
+.slip:focus-visible .slip-seal {
+  animation: slip-seal-press 420ms var(--slip-ease) both;
+  filter: drop-shadow(0 1px 2px rgb(196 58 58 / 18%));
+}
+
+@keyframes slip-seal-press {
+  0% { transform: rotate(-4deg) scale(1); }
+  40% { transform: rotate(-4deg) scale(1.05); }
+  100% { transform: rotate(-4deg) scale(0.98); }
 }
 
 .slip:nth-child(2) .slip-seal {
@@ -1035,7 +1161,18 @@ html.dark .slip-latest {
 }
 
 /* 入场：题字先落墨，知识入口依次显现。 */
-.stage.is-in .brush-col,
+.stage.is-in .brush-col {
+  opacity: 1;
+}
+
+.stage.is-in .brush-mark > span {
+  animation: brush-write-in 820ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.stage.is-in .brush-mark > span:nth-child(2) {
+  animation-delay: 120ms;
+}
+
 .stage.is-in .stage-kicker,
 .stage.is-in .stage-title,
 .stage.is-in .stage-hint {
@@ -1048,6 +1185,11 @@ html.dark .slip-latest {
 .stage.is-in .slip {
   animation: slip-in 560ms ease both;
   animation-delay: calc(var(--i) * 160ms + 480ms);
+}
+
+@keyframes brush-write-in {
+  from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(-8px); }
+  to { opacity: 1; clip-path: inset(-3px); transform: translateY(0); }
 }
 
 @keyframes ink-in {
@@ -1321,10 +1463,9 @@ html.dark .slip-latest {
   }
 
   .landscape-scene {
-    --ripple-distance: 10px;
-    top: 24px;
-    right: 0;
-    width: 260px;
+    top: 18px;
+    right: var(--scene-edge-offset, 0px);
+    width: 46vw;
   }
 
   .stage-head {
@@ -1390,8 +1531,7 @@ html.dark .slip-latest {
   }
 
   .landscape-scene {
-    --ripple-distance: 11.8182px;
-    width: 220px;
+    width: 44vw;
   }
 
   html .VPLocalSearchBox .shell {
@@ -1412,9 +1552,14 @@ html.dark .slip-latest {
     padding: 24px 24px 16px;
   }
 
+  .landscape-scene {
+    top: 12px;
+    width: calc(100vw - 24px);
+  }
+
   .stage-head {
     gap: 20px;
-    padding: 176px 0 0;
+    padding: calc(50vw + 12px) 0 0;
     min-height: 0;
   }
 
@@ -1474,6 +1619,55 @@ html.dark .slip-latest {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .stage .plum-illustration.is-loaded .plum-brush-reveal,
+  .stage .plum-illustration.is-loaded .plum-flower-cluster {
+    animation: none !important;
+    opacity: 1;
+    stroke-dashoffset: 0;
+    visibility: visible;
+  }
+
+  .slip-aura {
+    transition: none;
+  }
+
+  .landscape-parallax {
+    transform: none;
+    transition: none;
+  }
+
+  .stage .brush-col,
+  .stage .brush-mark > span {
+    animation: none !important;
+    opacity: 1;
+    clip-path: none;
+    transform: none;
+  }
+
+  .stage-head .seal,
+  .stage-head .seal:hover {
+    animation: none !important;
+    transition: none;
+    scale: 1;
+  }
+
+  .station-home .VPNavBarSearch .DocSearch-Button::after {
+    transition: none;
+    transform: none;
+  }
+
+  .slip::before,
+  .slip::after,
+  .slip .slip-seal {
+    animation: none !important;
+  }
+
+  .slip-duty,
+  .slip-latest,
+  .slip .slip-seal {
+    transition: none;
+  }
+
   .page-plum-fall {
     display: none;
   }
@@ -1483,35 +1677,31 @@ html.dark .slip-latest {
     animation: none;
   }
 
-  .stage .plum-bough,
   .stage .landscape-water > path,
+  .stage .landscape-bird,
+  .stage .landscape-bird-wings,
   .stage .landscape-mist-breath {
     animation: none !important;
     transform: none;
   }
 
+  .stage .landscape-bird {
+    opacity: 0.65;
+  }
+
   .stage .landscape-mist-breath {
     opacity: 1;
   }
 
-  .stage .falling-petal {
-    display: none;
-    animation: none !important;
-  }
-
-  .plum-bough,
   .landscape-mountains {
     transition: none;
   }
 
-  .stage .landscape-wash,
-  .stage .plum-growth,
-  .stage .plum-bud,
-  .stage .plum-flower-bud,
-  .stage .plum-flower {
+  .stage .landscape-wash {
     animation: none !important;
     opacity: 1;
     stroke-dashoffset: 0;
+    visibility: visible;
     transform: none;
   }
 

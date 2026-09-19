@@ -1,58 +1,62 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vitepress'
+import { useData, useRoute, useRouter, withBase } from 'vitepress'
 import { data as catalog } from '../../catalog.data.js'
 
 const router = useRouter()
 const route = useRoute()
+const { isDark } = useData()
+const plumSource = computed(() => withBase(`/images/plum-blossom${isDark.value ? '-dark' : ''}.svg`))
 const entered = ref(false)
+const plumLoaded = ref(false)
+const plumImage = ref(null)
+const atmosphereReady = ref(false)
+const stageElement = ref(null)
+const sceneElement = ref(null)
 let enterFrame
+let atmosphereFrame
+let atmosphereMedia
+let pointerPosition = null
+let viewportWidth = 1
+let viewportHeight = 1
+let sceneScale = 1
 
 const NUMERALS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 
-const plumBranches = [
-  { d: 'M436 167 Q422 151 429 128 L419 102 Q424 87 418 70 L422 43', width: 3.4, delay: 1.3, duration: 1.9 },
-  { d: 'M428 128 L453 110 Q459 95 470 83 L476 62', width: 1.6, delay: 2.1, duration: 1.4 },
-  { d: 'M421 93 L397 77 390 53 376 39', width: 1.2, delay: 2.4, duration: 1.4 },
-  { d: 'M375 141 Q352 159 329 171 L310 169 Q291 180 270 181 L242 199', width: 2.5, delay: 2.0, duration: 1.8 },
-  { d: 'M329 171 L322 195 Q305 205 299 224', width: 1.2, delay: 2.8, duration: 1.2 },
-  { d: 'M288 180 L271 164 249 163 237 150', width: 0.8, delay: 3.1, duration: 1.1 },
-  { d: 'M321 127 L309 101 Q312 83 299 65 L302 40 292 23', width: 2.1, delay: 2.3, duration: 1.8 },
-  { d: 'M307 94 Q327 82 332 66 L351 52', width: 1.1, delay: 3.0, duration: 1.2 },
-  { d: 'M301 57 L279 48 272 33', width: 0.75, delay: 3.4, duration: 1.0 },
-  { d: 'M229 104 L209 126 Q193 129 179 143 L154 148 135 161', width: 1.8, delay: 2.9, duration: 1.7 },
-  { d: 'M181 142 L174 123 156 118', width: 0.8, delay: 3.6, duration: 1.0 },
-  { d: 'M179 91 L165 73 164 50 147 36', width: 1.3, delay: 3.2, duration: 1.4 },
-  { d: 'M142 91 L123 108 102 108 81 119', width: 0.85, delay: 3.6, duration: 1.2 }
+// A few broad brush masks follow the painted branches; the texture paths stay still.
+const plumGrowthStrokes = [
+  { id: 'trunk', d: 'M-12 228 Q33 239 64 277 L119 315 L143 338 Q177 339 201 317 L238 279 Q252 271 291 260', width: 68, delay: 0.2, duration: 2.7 },
+  { id: 'hanging', d: 'M64 277 Q85 312 96 349 L110 367 L126 397', width: 25, delay: 1.4, duration: 2.1 },
+  { id: 'lower', d: 'M173 335 Q213 355 246 341 L282 323', width: 25, delay: 2.2, duration: 1.8 },
+  { id: 'upright', d: 'M291 260 Q304 228 312 204 L312 184 Q299 169 293 149', width: 25, delay: 2.8, duration: 2.1 },
+  { id: 'center', d: 'M312 184 Q317 170 333 162', width: 18, delay: 4.3, duration: 0.8 },
+  { id: 'crown', d: 'M312 204 Q342 185 363 171 L381 143', width: 20, delay: 4.2, duration: 1.7 },
+  { id: 'left', d: 'M251 272 Q253 252 245 232 Q244 216 258 203 L274 183', width: 20, delay: 2.8, duration: 1.7 },
+  { id: 'left-bud', d: 'M245 232 L237 204 L237 178', width: 14, delay: 3.9, duration: 1.1 },
+  { id: 'right', d: 'M291 260 L324 248 Q343 230 355 221 L367 200 L396 203', width: 24, delay: 3.2, duration: 2.1 },
+  { id: 'right-buds', d: 'M355 221 Q377 218 397 236 M355 221 Q372 233 381 253', width: 16, delay: 5.1, duration: 1.1 }
 ]
 
-const plumBlossoms = [
-  { x: 422, y: 83, scale: 0.8, rotate: 18, delay: 3.8 },
-  { x: 439, y: 112, scale: 0.5, rotate: -22, delay: 4.1 },
-  { x: 466, y: 86, scale: 0.63, rotate: 10, delay: 4.4 },
-  { x: 393, y: 60, scale: 0.46, rotate: 35, delay: 4.5 },
-  { x: 324, y: 192, scale: 0.65, rotate: -12, delay: 4.5 },
-  { x: 269, y: 180, scale: 0.78, rotate: 22, delay: 4.7 },
-  { x: 252, y: 192, scale: 0.4, rotate: -18, delay: 5.0 },
-  { x: 302, y: 66, scale: 0.82, rotate: 8, delay: 4.6 },
-  { x: 331, y: 70, scale: 0.56, rotate: -8, delay: 4.9 },
-  { x: 279, y: 47, scale: 0.4, rotate: 32, delay: 5.2 },
-  { x: 183, y: 139, scale: 0.72, rotate: -20, delay: 5.0 },
-  { x: 165, y: 59, scale: 0.63, rotate: 24, delay: 5.3 },
-  { x: 145, y: 152, scale: 0.42, rotate: 5, delay: 5.5 },
-  { x: 107, y: 108, scale: 0.5, rotate: -8, delay: 5.6 }
+const plumFlowerClusters = [
+  { id: 'hanging', delay: 3.8 },
+  { id: 'lower', delay: 4.3 },
+  { id: 'left', delay: 4.8 },
+  { id: 'top-bud', delay: 5.1 },
+  { id: 'left-bud', delay: 5.2 },
+  { id: 'center', delay: 5.4 },
+  { id: 'right', delay: 5.6 },
+  { id: 'crown', delay: 6.1 },
+  { id: 'right-buds', delay: 6.5 }
 ]
 
-const plumBuds = [
-  { x: 422, y: 45, rotate: 12, delay: 3.5 },
-  { x: 474, y: 65, rotate: 30, delay: 3.8 },
-  { x: 299, y: 221, rotate: -130, delay: 4.0 },
-  { x: 239, y: 153, rotate: -55, delay: 4.3 },
-  { x: 293, y: 26, rotate: -20, delay: 4.3 },
-  { x: 349, y: 53, rotate: 40, delay: 4.5 },
-  { x: 149, y: 38, rotate: -35, delay: 4.7 },
-  { x: 83, y: 118, rotate: -70, delay: 4.8 }
-]
+function onPlumLoad() {
+  plumLoaded.value = true
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) atmosphereReady.value = true
+}
+
+function onPlumRevealEnd(event) {
+  if (event.animationName === 'plum-bloom' && event.target.dataset.final === 'true') atmosphereReady.value = true
+}
 
 function cn(n) {
   if (n <= 10) return NUMERALS[n]
@@ -122,43 +126,105 @@ function enter() {
   entered.value = true
 }
 
+function renderAtmosphere() {
+  atmosphereFrame = null
+  const stage = stageElement.value
+  if (!stage) return
+  const x = pointerPosition?.x ?? viewportWidth / 2
+  const y = pointerPosition?.y ?? viewportHeight / 2
+  const dx = Math.max(-1, Math.min(1, x / viewportWidth * 2 - 1))
+  const dy = Math.max(-1, Math.min(1, y / viewportHeight * 2 - 1))
+  const length = Math.max(1, Math.hypot(dx, dy))
+
+  stage.style.setProperty('--mountain-shift-x', `${-dx / length * 1.5 * sceneScale}px`)
+  stage.style.setProperty('--mountain-shift-y', `${-dy / length * 1.5 * sceneScale}px`)
+}
+
+function queueAtmosphere() {
+  if (atmosphereFrame == null) atmosphereFrame = requestAnimationFrame(renderAtmosphere)
+}
+
+function moveAtmosphere(event) {
+  if (!atmosphereReady.value || !atmosphereMedia?.matches || event.pointerType !== 'mouse') return
+  pointerPosition = { x: event.clientX, y: event.clientY }
+  queueAtmosphere()
+}
+
+function resetAtmosphere() {
+  pointerPosition = null
+  cancelAnimationFrame(atmosphereFrame)
+  atmosphereFrame = null
+  renderAtmosphere()
+}
+
+function leaveAtmosphere(event) {
+  if (!event.relatedTarget) resetAtmosphere()
+}
+
+function measureAtmosphere() {
+  viewportWidth = Math.max(1, window.innerWidth)
+  viewportHeight = Math.max(1, window.innerHeight)
+  const sceneBounds = sceneElement.value?.getBoundingClientRect()
+  sceneScale = 900 / (sceneBounds?.width || 900)
+  if (sceneBounds) {
+    stageElement.value?.style.setProperty('--scene-edge-offset', `${stageElement.value.getBoundingClientRect().right - document.documentElement.clientWidth}px`)
+  }
+  resetAtmosphere()
+}
+
 onMounted(() => {
+  if (plumImage.value?.complete && plumImage.value.naturalWidth > 0) onPlumLoad()
   enterFrame = requestAnimationFrame(enter)
+  atmosphereMedia = window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)')
+  measureAtmosphere()
+  atmosphereMedia.addEventListener('change', measureAtmosphere)
+  window.addEventListener('pointermove', moveAtmosphere, { passive: true })
+  window.addEventListener('pointerout', leaveAtmosphere)
+  window.addEventListener('blur', resetAtmosphere)
+  window.addEventListener('resize', measureAtmosphere)
+  document.addEventListener('visibilitychange', resetAtmosphere)
   window.addEventListener('keydown', onKeydown)
 })
 
 onUnmounted(() => {
   cancelAnimationFrame(enterFrame)
+  cancelAnimationFrame(atmosphereFrame)
+  atmosphereMedia?.removeEventListener('change', measureAtmosphere)
+  window.removeEventListener('pointermove', moveAtmosphere)
+  window.removeEventListener('pointerout', leaveAtmosphere)
+  window.removeEventListener('blur', resetAtmosphere)
+  window.removeEventListener('resize', measureAtmosphere)
+  document.removeEventListener('visibilitychange', resetAtmosphere)
   window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
 <template>
-  <section class="stage" :class="{ 'is-in': entered }">
-    <div class="landscape-scene" aria-hidden="true">
-    <svg class="plum-art" viewBox="0 0 520 400" fill="none" aria-hidden="true" focusable="false">
+  <section ref="stageElement" class="stage" :class="{ 'is-in': entered, 'has-atmosphere': atmosphereReady }">
+    <div ref="sceneElement" class="landscape-scene" aria-hidden="true">
+    <svg class="plum-art" viewBox="0 0 900 450" fill="none" aria-hidden="true" focusable="false">
       <defs>
-        <linearGradient id="home-landscape-sides" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="520" y2="0">
+        <linearGradient id="home-landscape-sides" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="900" y2="0">
           <stop offset="0" stop-color="white" stop-opacity="0" />
-          <stop offset="0.06" stop-color="white" stop-opacity="0" />
-          <stop offset="0.28" stop-color="white" />
-          <stop offset="0.68" stop-color="white" />
-          <stop offset="0.94" stop-color="white" stop-opacity="0" />
+          <stop offset="0.025" stop-color="white" stop-opacity="0" />
+          <stop offset="0.15" stop-color="white" />
+          <stop offset="0.82" stop-color="white" />
+          <stop offset="0.98" stop-color="white" stop-opacity="0" />
           <stop offset="1" stop-color="white" stop-opacity="0" />
         </linearGradient>
-        <linearGradient id="home-mountain-foot" gradientUnits="userSpaceOnUse" x1="0" y1="220" x2="0" y2="350">
+        <linearGradient id="home-mountain-foot" gradientUnits="userSpaceOnUse" x1="0" y1="160" x2="0" y2="390">
           <stop offset="0" stop-color="white" />
           <stop offset="0.22" stop-color="white" />
           <stop offset="0.58" stop-color="white" stop-opacity="0.55" />
           <stop offset="1" stop-color="white" stop-opacity="0" />
         </linearGradient>
-        <mask id="home-landscape-edge" maskUnits="userSpaceOnUse" x="-32" y="-32" width="584" height="464" style="mask-type: alpha">
-          <rect x="-32" y="-32" width="584" height="464" fill="url(#home-landscape-sides)" />
+        <mask id="home-landscape-edge" maskUnits="userSpaceOnUse" x="-32" y="-32" width="964" height="514" style="mask-type: alpha">
+          <rect x="-32" y="-32" width="964" height="514" fill="url(#home-landscape-sides)" />
         </mask>
-        <mask id="home-mountain-base" maskUnits="userSpaceOnUse" x="-32" y="180" width="584" height="252" style="mask-type: alpha">
-          <rect x="-32" y="180" width="584" height="252" fill="url(#home-mountain-foot)" />
+        <mask id="home-mountain-base" maskUnits="userSpaceOnUse" x="-32" y="120" width="964" height="362" style="mask-type: alpha">
+          <rect x="-32" y="120" width="964" height="362" fill="url(#home-mountain-foot)" />
         </mask>
-        <linearGradient id="home-water-ink" gradientUnits="userSpaceOnUse" x1="48" y1="0" x2="478" y2="0">
+        <linearGradient id="home-water-ink" gradientUnits="userSpaceOnUse" x1="32" y1="0" x2="874" y2="0">
           <stop class="landscape-water-ink" offset="0" stop-opacity="0" />
           <stop class="landscape-water-ink" offset="0.35" />
           <stop class="landscape-water-ink" offset="0.65" stop-opacity="0.85" />
@@ -170,119 +236,74 @@ onUnmounted(() => {
           <stop class="landscape-mist-color" offset="0.6" />
           <stop class="landscape-mist-color" offset="1" stop-opacity="0" />
         </linearGradient>
-        <filter id="home-mist-soften" filterUnits="userSpaceOnUse" x="-40" y="140" width="600" height="280" color-interpolation-filters="sRGB">
+        <filter id="home-mist-soften" filterUnits="userSpaceOnUse" x="-40" y="140" width="980" height="340" color-interpolation-filters="sRGB">
           <feGaussianBlur stdDeviation="7" />
         </filter>
-        <linearGradient id="home-plum-mist-fade" gradientUnits="userSpaceOnUse" x1="450" y1="0" x2="518" y2="0">
-          <stop offset="0" stop-color="white" />
-          <stop offset="0.2" stop-color="white" />
-          <stop offset="1" stop-color="black" />
-        </linearGradient>
-        <mask id="home-plum-mist" maskUnits="userSpaceOnUse" x="0" y="0" width="520" height="400">
-          <rect width="520" height="400" fill="url(#home-plum-mist-fade)" />
-        </mask>
-        <mask id="home-plum-trunk" maskUnits="userSpaceOnUse" x="0" y="0" width="520" height="400">
-          <path
-            class="plum-growth plum-trunk-reveal"
-            d="M540 218 L494 195 Q478 180 459 184 L434 168 430 157 407 162 Q387 153 374 141 L340 131 321 127 Q301 109 281 101 L251 108 229 104 205 95 179 91 144 93 117 80 91 72"
-            pathLength="100"
-            stroke="white"
-            stroke-width="38"
-            :style="{ '--grow-delay': '0.6s', '--grow-duration': '3.6s' }"
-          />
-        </mask>
       </defs>
 
+      <g class="landscape-parallax">
       <g class="landscape-wash">
+        <g class="landscape-birds">
+          <g transform="translate(164 116)">
+            <g class="landscape-bird">
+              <g class="landscape-bird-wings">
+                <path d="M0 0 C-4-5-9-7-14-6 C-9-5-5-2-1 1Z" />
+                <path d="M0 0 C4-6 9-8 14-7 C9-5 5-2 1 1Z" />
+              </g>
+              <path d="M-2 0 Q0-2 2 0 L0 3Z" />
+            </g>
+          </g>
+          <g transform="translate(128 132) scale(0.72)">
+            <g class="landscape-bird landscape-bird-follower">
+              <g class="landscape-bird-wings">
+                <path d="M0 0 C-4-5-9-7-14-6 C-9-5-5-2-1 1Z" />
+                <path d="M0 0 C4-6 9-8 14-7 C9-5 5-2 1 1Z" />
+              </g>
+              <path d="M-2 0 Q0-2 2 0 L0 3Z" />
+            </g>
+          </g>
+        </g>
         <g class="landscape-distance" mask="url(#home-landscape-edge)">
         <g class="landscape-mountains" mask="url(#home-mountain-base)">
-          <path class="mountain-far" d="M-24 315 C42 313 68 284 98 278 C123 271 130 241 149 240 C163 239 175 270 192 268 C213 266 231 222 251 219 C270 216 281 252 303 256 C329 261 345 228 364 233 C386 239 400 274 430 278 C468 285 490 303 544 307 L544 400H-24Z" />
-          <path class="mountain-middle" d="M-24 337 C48 329 75 312 104 307 C129 302 149 268 170 265 C192 262 199 286 218 288 C241 292 260 271 280 276 C298 281 320 240 340 243 C360 247 375 282 399 288 C423 294 443 276 463 290 C484 304 499 316 544 323 L544 400H-24Z" />
-          <path class="mountain-near" d="M-24 363 C40 352 70 336 107 327 C145 317 159 300 183 302 C207 304 221 322 247 323 C274 324 292 301 314 300 C339 299 355 320 384 328 C423 339 470 340 544 359 L544 410H-24Z" />
+          <path class="mountain-far" d="M-40 337 C35 326 56 300 90 298 C118 296 147 245 175 232 C191 221 201 179 218 180 C237 182 246 235 267 236 C298 238 323 194 347 176 C365 162 371 131 385 140 C411 156 426 219 449 226 C473 234 498 209 520 218 C541 229 562 270 597 271 C628 272 655 231 684 239 C724 250 749 302 788 311 C833 322 879 320 940 340 L940 450H-40Z" />
+          <path class="mountain-middle" d="M-40 359 C26 349 67 322 109 314 C148 307 170 278 194 273 C218 268 227 286 249 280 C270 273 285 230 307 222 C326 217 336 249 352 253 C378 260 397 243 414 254 C443 273 455 306 487 305 C523 303 550 279 580 285 C609 291 625 269 647 271 C675 273 689 317 722 319 C753 321 778 303 803 314 C836 328 880 352 940 365 L940 460H-40Z" />
+          <path class="mountain-near" d="M-40 390 C32 381 83 363 134 354 C178 345 205 318 238 322 C267 325 284 344 312 343 C343 342 368 316 393 325 C421 334 438 358 474 357 C519 356 546 326 577 332 C608 338 639 363 675 362 C721 361 751 351 790 365 C835 381 889 383 940 397 L940 470H-40Z" />
         </g>
         <g class="landscape-water" stroke="url(#home-water-ink)">
-          <path d="M46 330 C101 326 136 331 177 330 S249 326 279 328 M315 328 Q380 322 473 327" />
-          <path d="M69 344 Q135 339 192 343 T319 341 M356 342 Q403 338 481 342" />
-          <path d="M54 359 Q114 355 172 358 M215 357 Q274 353 327 357 T471 358" />
-          <path d="M98 374 Q155 370 211 373 M268 374 Q322 368 390 372 T465 373" />
+          <path d="M30 351 Q97 346 168 350 T315 349 M374 351 Q458 343 552 348 M636 347 Q725 343 857 349" />
+          <path d="M58 370 Q146 366 224 369 M278 368 Q359 363 435 367 T612 368 M680 366 Q761 361 880 367" />
+          <path d="M24 391 Q124 386 203 390 M259 389 Q337 383 405 388 M458 390 Q548 384 642 389 T871 389" />
+          <path d="M97 419 Q174 414 257 418 M329 417 Q414 411 506 416 M577 420 Q688 413 819 417" />
         </g>
         </g>
         <g class="landscape-atmosphere" mask="url(#home-landscape-edge)">
         <g class="landscape-mist" fill="url(#home-mist-wash)" filter="url(#home-mist-soften)">
           <g class="landscape-mist-breath">
-          <path d="M-20 225 C60 202 119 248 190 234 S290 199 349 212 S448 242 540 209 L540 266 C451 281 390 245 326 253 S227 286 159 265 S53 263-20 276Z" />
-          <path class="landscape-mist-low" d="M-20 301 C68 282 115 318 196 304 S310 277 383 297 S469 316 540 294 L540 345 C461 360 405 329 341 333 S227 359 153 341 S48 335-20 351Z" />
+          <path d="M-30 244 C91 219 166 270 277 246 S463 217 577 242 S765 268 930 236 L930 293 C772 311 672 276 558 284 S367 307 250 284 S82 290-30 305Z" />
+          <path class="landscape-mist-low" d="M-30 332 C107 308 196 347 315 333 S496 313 633 330 S803 349 930 325 L930 386 C803 397 696 365 577 374 S376 399 261 376 S95 379-30 397Z" />
           </g>
         </g>
         </g>
       </g>
 
-      <g class="plum-bough">
-      <g mask="url(#home-plum-mist)">
-      <g mask="url(#home-plum-trunk)">
-        <path
-          class="plum-trunk"
-          d="M518 225 C506 219 498 210 490 205 Q484 199 478 191 C468 198 453 183 442 178 Q432 182 428 170 L425 163 Q417 170 408 168 C393 166 380 149 371 147 Q357 146 341 135 C332 137 323 134 317 128 Q300 114 281 106 C268 106 259 115 249 111 Q238 113 226 107 C209 108 192 92 180 94 Q163 90 145 95 C124 91 106 80 76 69 Q110 77 145 90 C160 88 172 83 182 87 Q202 85 226 99 C241 104 250 105 260 102 Q275 90 286 98 C300 99 315 117 325 120 Q332 125 344 124 C361 126 378 138 390 146 Q404 158 411 155 C419 146 430 148 435 155 L440 165 Q451 170 460 176 C470 170 483 178 491 187 Q502 191 518 198Z"
-        />
-        <path class="plum-bark" d="M511 212q-8-5-13-11m-28-17-6-2m-28-10-4-5m-15-5-7 1m-20-8-9-7m-25-15-12-2m-24-6-9-9m-22-12-6-1m-28 5-8 1" />
-        <path class="plum-bark plum-bark-fine" d="M505 205l-6-5m-18-11-4-1m-17-5-6-3m-21-14-2-5m-21 2-5-2m-33-18-8-4m-24-8-6-2m-30-15-5-3m-82-10-8-3m-27-7-7 1" />
-        <path class="plum-knots" d="M492 198q-7-7-12-5m-47-29q-6-5-8 0m-53-22 7 4m-99-43-7 2m-95-13 5 2" />
-      </g>
-      </g>
-
-      <path
-        v-for="branch in plumBranches"
-        :key="branch.d"
-        class="plum-growth plum-twig"
-        :d="branch.d"
-        :stroke-width="branch.width"
-        pathLength="100"
-        :style="{ '--grow-delay': `${branch.delay}s`, '--grow-duration': `${branch.duration}s` }"
-      />
-
-      <g
-        v-for="bud in plumBuds"
-        :key="`${bud.x}-${bud.y}`"
-        :transform="`translate(${bud.x} ${bud.y}) rotate(${bud.rotate})`"
-        :style="{ '--bloom-delay': `${bud.delay}s` }"
-      >
-        <g class="plum-bud">
-          <path class="plum-bud-petal" d="M0 3 C-6 0 -5 -8 -1 -9 C4 -10 7 -2 0 3Z" />
-          <path class="plum-calyx" d="M-4 0 L0 4 L4 -1" />
-        </g>
-      </g>
-
-      <g
-        v-for="flower in plumBlossoms"
-        :key="`${flower.x}-${flower.y}`"
-        :transform="`translate(${flower.x} ${flower.y}) rotate(${flower.rotate}) scale(${flower.scale})`"
-        :style="{ '--bloom-delay': `${flower.delay}s` }"
-      >
-        <circle class="plum-flower-bud" r="3.2" />
-        <g class="plum-flower">
-          <path
-            v-for="petal in 5"
-            :key="petal"
-            class="plum-petal"
-            d="M0 2 C-5 1 -11 -5 -8 -11 C-6 -16 1 -17 5 -12 C10 -7 7 0 0 2Z"
-            :transform="`rotate(${(petal - 1) * 72})`"
-          />
-          <path class="plum-stamen" d="M0 0 L-3 -7 M0 0 L5 -5 M0 0 L7 3 M0 0 L0 7 M0 0 L-6 3" />
-          <g class="plum-pollen">
-            <circle cx="-3" cy="-7" r="1.2" />
-            <circle cx="5" cy="-5" r="1" />
-            <circle cx="7" cy="3" r="1.1" />
-            <circle cx="0" cy="7" r="1" />
-            <circle cx="-6" cy="3" r="1.2" />
-          </g>
-          <circle class="plum-flower-heart" r="2" />
-        </g>
-      </g>
       </g>
     </svg>
-      <span class="falling-petal falling-petal-one"></span>
-      <span class="falling-petal falling-petal-two"></span>
-      <span class="falling-petal falling-petal-three"></span>
+      <div class="plum-picture">
+        <img ref="plumImage" class="plum-preload" :src="plumSource" alt="" @load="onPlumLoad" />
+        <svg class="plum-illustration" :class="{ 'is-loaded': plumLoaded }" viewBox="0 103 436 332" aria-hidden="true" focusable="false" @animationend="onPlumRevealEnd">
+          <defs>
+            <mask id="home-plum-growth" maskUnits="userSpaceOnUse" x="0" y="103" width="436" height="332" style="mask-type: alpha">
+              <path v-for="stroke in plumGrowthStrokes" :key="stroke.id" class="plum-brush-reveal" :d="stroke.d" :stroke-width="stroke.width" pathLength="1" :style="{ '--grow-delay': `${stroke.delay}s`, '--grow-duration': `${stroke.duration}s` }" />
+            </mask>
+          </defs>
+          <g mask="url(#home-plum-growth)">
+            <use :href="`${plumSource}#plum-branches`" />
+          </g>
+          <g v-for="(cluster, index) in plumFlowerClusters" :key="cluster.id" class="plum-flower-cluster" :data-final="index === plumFlowerClusters.length - 1" :style="{ '--bloom-delay': `${cluster.delay}s` }">
+            <use :href="`${plumSource}#plum-${cluster.id}`" />
+          </g>
+        </svg>
+      </div>
     </div>
 
     <header class="stage-head">
@@ -315,6 +336,7 @@ onUnmounted(() => {
           :aria-keyshortcuts="slip.kbd"
           @click="open($event, slip)"
         >
+          <span class="slip-aura" aria-hidden="true"></span>
           <span class="slip-fishtail" aria-hidden="true"><svg viewBox="0 0 28 48" focusable="false"><path d="M2 1H26L14 14 26 27H2L14 14ZM2 32H26V34H2ZM6 39H22L14 47Z" /></svg></span>
           <span class="slip-name">{{ slip.name }}</span>
           <span class="slip-duty">{{ slip.duty }}</span>
