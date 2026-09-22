@@ -1,14 +1,73 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { useData } from 'vitepress'
+import { useData, useRouter } from 'vitepress'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { INK_EASE } from './motion/ink.js'
+import { createDocMotion } from './motion/docMotion.js'
 
 const { Layout } = DefaultTheme
 const { isDark, page } = useData()
+const router = useRouter()
 const appearanceButton = ref(null)
 let appearanceElement
 let appearanceTransition
 let switchingAppearance = false
+let docMotion = null
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+// 以 DOM 判断，路由钩子触发时 page 数据可能还没换过来。
+function isDocPage() {
+  return Boolean(document.querySelector('.vp-doc'))
+}
+
+function setupDocMotion() {
+  docMotion?.revert()
+  docMotion = null
+  if (!isDocPage() || prefersReducedMotion()) return
+  docMotion = createDocMotion()
+}
+
+// 窄屏上全页模糊代价太高，只留淡入淡出。
+function useInkBlur() {
+  return window.matchMedia('(min-width: 641px)').matches
+}
+
+// 转场洗墨：旧页墨沉下去，新页从纸里洇出来。
+function inkOut() {
+  const shell = document.querySelector('.VPContent')
+  if (!shell || prefersReducedMotion()) return
+  gsap.killTweensOf(shell)
+  gsap.to(shell, {
+    autoAlpha: 0,
+    filter: useInkBlur() ? 'blur(2px)' : 'blur(0px)',
+    duration: 0.22,
+    ease: 'power2.in'
+  })
+}
+
+function inkIn() {
+  const shell = document.querySelector('.VPContent')
+  if (!shell) return
+  gsap.killTweensOf(shell)
+  if (prefersReducedMotion()) {
+    gsap.set(shell, { clearProps: 'all' })
+    return
+  }
+  gsap.fromTo(shell,
+    { autoAlpha: 0, filter: useInkBlur() ? 'blur(4px)' : 'blur(0px)' },
+    {
+      autoAlpha: 1,
+      filter: 'blur(0px)',
+      duration: 0.45,
+      ease: INK_EASE.bloom,
+      clearProps: 'filter'
+    })
+}
 
 const pagePetals = [
   { left: '5%', size: '5px', duration: '24s', delay: '-9s', sway: '7s' },
@@ -99,12 +158,25 @@ onMounted(() => {
   appearanceElement = appearanceButton.value
   appearanceElement?.addEventListener('click', toggleAppearance)
   window.addEventListener('keydown', onKeydown)
+  router.onBeforeRouteChange = () => { inkOut() }
+  router.onAfterRouteChange = () => {
+    nextTick(() => {
+      setupDocMotion()
+      ScrollTrigger.refresh()
+      inkIn()
+    })
+  }
+  nextTick(setupDocMotion)
 })
 
 onUnmounted(() => {
   appearanceElement?.removeEventListener('click', toggleAppearance)
   appearanceTransition?.skipTransition()
   window.removeEventListener('keydown', onKeydown)
+  router.onBeforeRouteChange = undefined
+  router.onAfterRouteChange = undefined
+  docMotion?.revert()
+  docMotion = null
 })
 
 </script>

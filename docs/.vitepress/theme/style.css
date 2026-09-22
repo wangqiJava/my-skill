@@ -13,6 +13,8 @@
   --font-brush: var(--font-display);
   --font-body: var(--font-latin), "Noto Serif SC", "Songti SC", "SimSun", serif;
   --font-mono: var(--font-body);
+  /* 全站统一的墨色缓动，与 JS 里的 cubic-bezier 保持一致。 */
+  --ink-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
   /* light shell: 淡宣纸 */
   --shell: #f5f0e6;
@@ -30,6 +32,7 @@
   --card-shadow: rgb(105 66 40 / 10%);
   --title-ink: #3a3a3a;
   --title-bleed: rgb(44 44 44 / 12%);
+  --ink-bleed-ink: 58 58 58;
   --paper-shadow: rgb(65 51 30 / 7%);
   --paper-shadow-long: rgb(65 51 30 / 12%);
   --frame-ink: rgb(58 58 58 / 32%);
@@ -75,6 +78,7 @@ html.dark {
   --card-shadow: rgb(130 76 48 / 16%);
   --title-ink: var(--text);
   --title-bleed: rgb(232 228 217 / 8%);
+  --ink-bleed-ink: 232 228 217;
   --paper-shadow: rgb(0 0 0 / 15%);
   --paper-shadow-long: rgb(0 0 0 / 25%);
   --frame-ink: rgb(232 228 217 / 28%);
@@ -302,6 +306,58 @@ html .VPLocalSearchBox .shell {
   font-family: var(--font-body) !important;
   font-size: 14px !important;
   letter-spacing: 0.03em;
+}
+
+/* 侧边栏水墨化：栏目标题用楷体，当前项朱砂，悬停扫出一道水纹。 */
+.VPSidebarItem.level-0 > .item > .text {
+  font-family: var(--font-display) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.14em;
+}
+
+.VPSidebarItem .item > .link > .text {
+  transition: color 260ms var(--ink-ease);
+}
+
+.VPSidebarItem.is-link > .item > .link {
+  position: relative;
+}
+
+.VPSidebarItem.is-link > .item > .link::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  left: 10px;
+  height: 8px;
+  background: var(--wave-rule) repeat-x center;
+  opacity: 0.6;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 420ms var(--ink-ease);
+  pointer-events: none;
+}
+
+.VPSidebarItem.is-link > .item > .link:hover::after,
+.VPSidebarItem.is-link > .item > .link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.VPSidebarItem.is-link > .item > .link:hover > .text,
+.VPSidebarItem.is-link > .item > .link:focus-visible > .text {
+  color: var(--zhu) !important;
+}
+
+.VPSidebarItem.is-active > .item .link > .text {
+  color: var(--zhu) !important;
+}
+
+/* 指示条改作一道朱砂笔痕，不再是默认主题的圆角细条。 */
+.VPSidebarItem.is-active > .item > .indicator {
+  width: 3px;
+  border-radius: 0;
+  background: var(--zhu);
+  clip-path: polygon(58% 0, 100% 8%, 44% 34%, 92% 64%, 52% 100%, 10% 94%, 46% 56%, 0 22%);
 }
 
 .VPSidebar {
@@ -814,11 +870,16 @@ html.dark .stage.scene-active .plum-illustration {
   text-shadow: 0.4px 0.7px 2px var(--title-bleed);
 }
 
+/* 渗墨：--ink-bleed 由 GSAP 在每字写成后推到 1 再收回 0，墨在纸纤维里散开又吃进去。 */
 .brush-mark > span {
+  --ink-bleed: 0;
   display: block;
   white-space: nowrap;
   opacity: 0;
   clip-path: inset(0 0 100% 0);
+  text-shadow:
+    0.4px 0.7px 2px var(--title-bleed),
+    0 0 calc(var(--ink-bleed) * 9px) rgb(var(--ink-bleed-ink) / calc(45% * (1 - var(--ink-bleed))));
 }
 
 .kicker-col {
@@ -1067,7 +1128,12 @@ html.dark .stage.scene-active .plum-illustration {
   pointer-events: none;
   opacity: 0;
   border-radius: inherit;
-  transition: opacity 0.4s ease-out;
+  /* 从光斑处洇开：缩放起点跟随指针，落位后 origin 不再起作用。 */
+  transform: scale(0.82);
+  transform-origin: var(--slip-spot-x) var(--slip-spot-y);
+  transition:
+    opacity 0.55s var(--slip-ease),
+    transform 0.55s var(--slip-ease);
 }
 
 .slip-aura::before {
@@ -1078,19 +1144,34 @@ html.dark .stage.scene-active .plum-illustration {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: radial-gradient(circle at var(--slip-spot-x) var(--slip-spot-y), rgba(200, 80, 60, 0.06) 0%, rgba(200, 80, 60, 0) 62%);
-  filter: none;
+  /* 多档衰减加轻微模糊，让墨晕没有可辨认的边界。 */
+  background: radial-gradient(
+    circle at var(--slip-spot-x) var(--slip-spot-y),
+    rgba(200, 80, 60, 0.05) 0%,
+    rgba(200, 80, 60, 0.03) 32%,
+    rgba(200, 80, 60, 0.012) 55%,
+    rgba(200, 80, 60, 0) 78%
+  );
+  filter: blur(8px);
 }
 
 html.dark .slip-aura::before {
-  background: radial-gradient(circle at var(--slip-spot-x) var(--slip-spot-y), rgba(232, 228, 217, 0.06) 0%, rgba(232, 228, 217, 0) 62%);
+  background: radial-gradient(
+    circle at var(--slip-spot-x) var(--slip-spot-y),
+    rgba(232, 228, 217, 0.05) 0%,
+    rgba(232, 228, 217, 0.03) 32%,
+    rgba(232, 228, 217, 0.012) 55%,
+    rgba(232, 228, 217, 0) 78%
+  );
 }
 
 .slip:hover .slip-aura,
 .slip:focus-visible .slip-aura {
   opacity: 1;
+  transform: scale(1);
 }
 
+/* 朱砂描边用 clip-path 过渡而非 keyframes：入场按笔顺描出，离场按相反笔顺收回。 */
 .slip::before,
 .slip::after {
   content: '';
@@ -1099,22 +1180,25 @@ html.dark .slip-aura::before {
   pointer-events: none;
   border: 0 solid var(--zhu);
   border-radius: inherit;
-  opacity: 0;
 }
 
 .slip::before {
   border-top-width: 1px;
   border-right-width: 1px;
+  clip-path: inset(0 100% 100% 0);
+  /* 离场时后收，让下半段先走完。 */
+  transition: clip-path 420ms var(--slip-ease) 420ms;
 }
 
 .slip::after {
   border-bottom-width: 1px;
   border-left-width: 1px;
+  clip-path: inset(100% 0 0 100%);
+  transition: clip-path 420ms var(--slip-ease);
 }
 
 .slip:hover,
 .slip:focus-visible {
-  --lift: -4px;
   border-color: var(--slip-line);
   box-shadow: 0 18px 34px -10px var(--card-shadow);
 }
@@ -1126,26 +1210,14 @@ html.dark .slip-aura::before {
 
 .slip:hover::before,
 .slip:focus-visible::before {
-  opacity: 1;
-  animation: slip-border-start 420ms var(--slip-ease) both;
+  clip-path: inset(0);
+  transition-delay: 0s;
 }
 
 .slip:hover::after,
 .slip:focus-visible::after {
-  opacity: 1;
-  animation: slip-border-finish 420ms var(--slip-ease) 420ms both;
-}
-
-@keyframes slip-border-start {
-  0% { clip-path: inset(0 100% 100% 0); }
-  50% { clip-path: inset(0 0 calc(100% - 1px) 0); }
-  100% { clip-path: inset(0); }
-}
-
-@keyframes slip-border-finish {
-  0% { clip-path: inset(100% 0 0 100%); }
-  50% { clip-path: inset(calc(100% - 1px) 0 0 0); }
-  100% { clip-path: inset(0); }
+  clip-path: inset(0);
+  transition-delay: 420ms;
 }
 
 .slip:focus-visible {
@@ -1635,6 +1707,14 @@ html.dark .slip-latest {
   clip-path: none;
 }
 
+/* 雾、水纹、飞鸟的常态循环交给 GSAP，避免 CSS 与 JS 两套缓动同时驱动。 */
+.stage.gsap-ready .landscape-mist-breath,
+.stage.gsap-ready .landscape-water > path,
+.stage.gsap-ready .landscape-bird,
+.stage.gsap-ready .landscape-bird-wings {
+  animation: none !important;
+}
+
 .stage.gsap-ready .plum-illustration.is-loaded .plum-brush-reveal {
   visibility: hidden;
 }
@@ -1754,17 +1834,42 @@ html.dark .slip-latest {
   color: var(--zhu);
 }
 
-.VPDoc .vp-doc li a {
+/* 正文与水纹链接：悬停时一道水纹自左扫出，代替默认的直线下划线。 */
+.VPDoc .vp-doc p > a,
+.VPDoc .vp-doc li > a {
+  position: relative;
   color: var(--mo);
   text-decoration: none;
 }
 
-.VPDoc .vp-doc li a:hover,
-.VPDoc .vp-doc li a:focus-visible {
+.VPDoc .vp-doc p > a::after,
+.VPDoc .vp-doc li > a::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  left: 0;
+  height: 8px;
+  background: var(--wave-rule) repeat-x center;
+  opacity: 0.7;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 420ms var(--ink-ease);
+  pointer-events: none;
+}
+
+.VPDoc .vp-doc p > a:hover,
+.VPDoc .vp-doc p > a:focus-visible,
+.VPDoc .vp-doc li > a:hover,
+.VPDoc .vp-doc li > a:focus-visible {
   color: var(--zhu);
-  text-decoration: underline;
-  text-decoration-color: var(--zhu);
-  text-underline-offset: 4px;
+}
+
+.VPDoc .vp-doc p > a:hover::after,
+.VPDoc .vp-doc p > a:focus-visible::after,
+.VPDoc .vp-doc li > a:hover::after,
+.VPDoc .vp-doc li > a:focus-visible::after {
+  transform: scaleX(1);
 }
 
 .VPDoc .vp-doc div[class*="language-"] {
@@ -1822,6 +1927,9 @@ html.dark .slip-latest {
   width: 5px;
   background: var(--zhu);
   clip-path: polygon(37% 0, 84% 3%, 65% 18%, 100% 47%, 67% 81%, 79% 96%, 26% 100%, 0 94%, 24% 69%, 6% 35%);
+  /* --stroke-reveal 由 GSAP 推到 1，笔触自上而下写出；无 JS 时默认为 1。 */
+  transform: scaleY(var(--stroke-reveal, 1));
+  transform-origin: top center;
 }
 
 .VPSidebar .group + .group,
@@ -2034,6 +2142,13 @@ html.dark .slip-latest {
     font-size: clamp(44px, 10vw, 60px);
   }
 
+  /* 窄屏上渗墨的扩散半径减半，避免糊成一团。 */
+  .brush-mark > span {
+    text-shadow:
+      0.4px 0.7px 2px var(--title-bleed),
+      0 0 calc(var(--ink-bleed) * 5px) rgb(var(--ink-bleed-ink) / calc(45% * (1 - var(--ink-bleed))));
+  }
+
   .stage-kicker {
     font-size: 12px;
   }
@@ -2239,6 +2354,12 @@ html.dark .slip-latest {
   .slip::after,
   .slip .slip-seal {
     animation: none !important;
+  }
+
+  .slip::before,
+  .slip::after {
+    transition: none;
+    clip-path: none;
   }
 
   .slip-duty,

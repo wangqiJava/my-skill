@@ -4,6 +4,8 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useData, useRoute, useRouter, withBase } from 'vitepress'
 import { data as catalog } from '../../catalog.data.js'
+import { INK_EASE } from '../motion/ink.js'
+import { createHomeIntro } from '../motion/homeIntro.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,7 +37,7 @@ let gsapMedia
 let motionEnabled = false
 let slipMotion = new WeakMap()
 let plumTimeline
-let introTimeline
+let homeIntro
 
 const NUMERALS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 
@@ -88,7 +90,7 @@ function playPlumReveal() {
   gsap.set(strokes, { visibility: 'visible', strokeDashoffset: 1 })
   gsap.set(flowers, { opacity: 0 })
   plumTimeline = gsap.timeline({
-    delay: 0.12,
+    delay: 0.9,
     onComplete: () => { atmosphereReady.value = true }
   })
 
@@ -96,21 +98,26 @@ function playPlumReveal() {
     plumTimeline.to(strokes[index], {
       strokeDashoffset: 0,
       duration: Math.max(0.22, stroke.duration * 0.34),
-      ease: 'power2.out'
+      ease: INK_EASE.stroke
     }, stroke.delay * 0.2)
   })
 
+  // 点厾：花是笔尖点上去的，带一点纸张回弹，不是淡入。
   plumFlowerClusters.forEach((cluster, index) => {
-    plumTimeline.to(flowers[index], {
-      opacity: 1,
-      duration: 0.38,
-      ease: 'power2.out'
-    }, cluster.delay * 0.2 + 0.35)
+    plumTimeline.fromTo(flowers[index],
+      { opacity: 0, scale: 0.42, rotate: -5, transformOrigin: '50% 50%' },
+      { opacity: 1, scale: 1, rotate: 0, duration: 0.34, ease: INK_EASE.dot },
+      cluster.delay * 0.2 + 0.35)
   })
 }
 
 watch([plumLoaded, gsapReady], ([loaded, ready]) => {
   if (loaded && ready) nextTick(playPlumReveal)
+})
+
+// 落款完成后才让山水平息下来呼吸，避免入场和常态两套节奏叠在一起。
+watch(atmosphereReady, (ready) => {
+  if (ready) homeIntro?.startAmbient()
 })
 
 function cn(n) {
@@ -263,6 +270,12 @@ function leaveAtmosphere(event) {
   if (!event.relatedTarget) resetAtmosphere()
 }
 
+function onVisibilityChange() {
+  resetAtmosphere()
+  if (document.hidden) homeIntro?.pauseAmbient()
+  else if (atmosphereReady.value) homeIntro?.resumeAmbient()
+}
+
 function measureAtmosphere() {
   viewportWidth = Math.max(1, window.innerWidth)
   viewportHeight = Math.max(1, window.innerHeight)
@@ -304,56 +317,7 @@ function setupGsap() {
     gsapMedia.add('(prefers-reduced-motion: no-preference)', () => {
       gsapReady.value = true
 
-      introTimeline = gsap.timeline({ defaults: { ease: 'power3.out' } })
-        .fromTo('.brush-col',
-          { autoAlpha: 0, y: 12 },
-          { autoAlpha: 1, y: 0, duration: 0.34 }
-        )
-        .fromTo('.brush-mark > span',
-          { autoAlpha: 0, clipPath: 'inset(0 0 100% 0)', y: -8 },
-          { autoAlpha: 1, clipPath: 'inset(-3px)', y: 0, duration: 0.5, stagger: 0.07 },
-          '-=0.16'
-        )
-        .fromTo('.stage-copy',
-          { autoAlpha: 0, x: 12 },
-          { autoAlpha: 1, x: 0, duration: 0.42 },
-          '-=0.25'
-        )
-        .fromTo('.landscape-wash',
-          { autoAlpha: 0 },
-          { autoAlpha: 1, duration: 0.62, ease: 'power2.out' },
-          '-=0.34'
-        )
-        .fromTo('.landscape-mountains',
-          { autoAlpha: 0, y: 80, scaleY: 0.82 },
-          { autoAlpha: 0.8, y: 55, scaleY: 0.82, duration: 0.46, ease: 'power2.out' },
-          '-=0.3'
-        )
-        .fromTo('.landscape-water > path',
-          { autoAlpha: 0, scaleX: 0.72 },
-          { autoAlpha: 0.75, scaleX: 1, duration: 0.4, stagger: 0.06, ease: 'power2.out' },
-          '-=0.24'
-        )
-        .fromTo('.landscape-mist-breath',
-          { autoAlpha: 0, xPercent: -8 },
-          { autoAlpha: 0.6, xPercent: 0, duration: 0.48, ease: 'power2.out' },
-          '-=0.3'
-        )
-        .fromTo('.plum-picture',
-          { autoAlpha: 0 },
-          { autoAlpha: 1, duration: 0.58, ease: 'power2.out' },
-          '-=0.4'
-        )
-        .fromTo('.catalog-heading',
-          { autoAlpha: 0, y: 10 },
-          { autoAlpha: 1, y: 0, duration: 0.36 },
-          '-=0.25'
-        )
-        .fromTo('.slip',
-          { autoAlpha: 0, y: 14 },
-          { autoAlpha: 1, y: 0, duration: 0.44, stagger: 0.08 },
-          '-=0.16'
-        )
+      homeIntro = createHomeIntro(stageElement.value)
 
       gsap.timeline({
         scrollTrigger: {
@@ -374,6 +338,8 @@ function setupGsap() {
 
       return () => {
         gsapReady.value = false
+        homeIntro?.kill()
+        homeIntro = null
       }
     })
 
@@ -421,7 +387,7 @@ onMounted(() => {
   window.addEventListener('pointerout', leaveAtmosphere)
   window.addEventListener('blur', resetAtmosphere)
   window.addEventListener('resize', measureAtmosphere)
-  document.addEventListener('visibilitychange', resetAtmosphere)
+  document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('keydown', onKeydown)
 })
 
@@ -433,10 +399,10 @@ onUnmounted(() => {
   window.removeEventListener('pointerout', leaveAtmosphere)
   window.removeEventListener('blur', resetAtmosphere)
   window.removeEventListener('resize', measureAtmosphere)
-  document.removeEventListener('visibilitychange', resetAtmosphere)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('keydown', onKeydown)
-  introTimeline?.kill()
-  introTimeline = null
+  homeIntro?.kill()
+  homeIntro = null
   plumTimeline?.kill()
   plumTimeline = null
   gsapMedia?.revert()
