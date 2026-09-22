@@ -2,3 +2,6 @@ node_modules/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 docs/.vitepress/dist.zip
+artifacts/
+pnpm-lock.yaml
+pnpm-workspace.yaml

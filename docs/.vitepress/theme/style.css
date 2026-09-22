@@ -23,6 +23,8 @@
   --text-3: #71695e;
   --sheet: #faf7f0;
   --card-fill: transparent;
+  --slip-paper: rgb(250 247 240 / 72%);
+  --slip-line: rgb(58 58 58 / 17%);
   --card-ink: #3a3a3a;
   --card-line: rgb(44 44 44 / 10%);
   --card-shadow: rgb(105 66 40 / 10%);
@@ -66,6 +68,8 @@ html.dark {
   --text-3: #a6a29a;
   --sheet: #232323;
   --card-fill: rgb(255 255 255 / 3%);
+  --slip-paper: rgb(35 35 35 / 78%);
+  --slip-line: rgb(232 228 217 / 17%);
   --card-ink: var(--text);
   --card-line: rgb(232 228 217 / 10%);
   --card-shadow: rgb(130 76 48 / 16%);
@@ -481,6 +485,10 @@ html.dark .page-plum-fall {
 /* 半幅横卷：近梅斜出，远山横陈；水与雾在纸上留白。 */
 .landscape-scene {
   --ripple-distance: 14px;
+  --plum-shift-x: 0px;
+  --plum-shift-y: 0px;
+  --mist-shift-x: 0px;
+  --mist-shift-y: 0px;
   position: absolute;
   top: -20px;
   right: var(--scene-edge-offset, 0px);
@@ -488,6 +496,45 @@ html.dark .page-plum-fall {
   aspect-ratio: 2 / 1;
   overflow: visible;
   user-select: none;
+}
+
+/* 借景的窗线只留下两笔，让山水有苏式园林的框景感。 */
+.landscape-scene::before,
+.landscape-scene::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.landscape-scene::before {
+  inset: 9% 2% 11% 4%;
+  background:
+    linear-gradient(var(--line), var(--line)) left top / 54px 1px no-repeat,
+    linear-gradient(var(--line), var(--line)) left top / 1px 42px no-repeat,
+    linear-gradient(var(--line), var(--line)) right top / 54px 1px no-repeat,
+    linear-gradient(var(--line), var(--line)) right top / 1px 42px no-repeat,
+    linear-gradient(var(--line), var(--line)) left bottom / 54px 1px no-repeat,
+    linear-gradient(var(--line), var(--line)) left bottom / 1px 42px no-repeat,
+    linear-gradient(var(--line), var(--line)) right bottom / 54px 1px no-repeat,
+    linear-gradient(var(--line), var(--line)) right bottom / 1px 42px no-repeat;
+  opacity: 0.22;
+  transition: opacity 500ms ease;
+}
+
+.landscape-scene::after {
+  right: 2%;
+  bottom: 11%;
+  left: 4%;
+  height: 8px;
+  background: var(--wave-rule) repeat-x center;
+  opacity: 0.28;
+  transition: opacity 500ms ease;
+}
+
+.stage.scene-active .landscape-scene::before,
+.stage.scene-active .landscape-scene::after {
+  opacity: 0.5;
 }
 
 .plum-art {
@@ -642,6 +689,11 @@ html.dark .plum-art {
   animation: ink-in 3000ms ease-out 150ms both;
 }
 
+.landscape-atmosphere {
+  transform: translate(var(--mist-shift-x), var(--mist-shift-y));
+  transition: transform 620ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
 /* Only the brush masks and flower groups animate; the source texture stays still. */
 .plum-picture {
   position: absolute;
@@ -649,6 +701,8 @@ html.dark .plum-art {
   right: 0;
   width: 60%;
   pointer-events: none;
+  transform: translate(var(--plum-shift-x), var(--plum-shift-y));
+  transition: transform 480ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .plum-preload {
@@ -662,11 +716,24 @@ html.dark .plum-art {
   transform: scaleX(-1);
   filter: saturate(0.48) contrast(0.94);
   opacity: 0.88;
+  transition: filter 600ms ease;
 }
 
 html.dark .plum-illustration {
   filter: none;
   opacity: 0.9;
+}
+
+.stage.scene-active .plum-illustration {
+  filter: saturate(0.68) contrast(1.02);
+}
+
+html.dark .stage.scene-active .plum-illustration {
+  filter: saturate(1.12) brightness(1.06);
+}
+
+.stage.scene-active .landscape-water > path {
+  --ripple-distance: 22px;
 }
 
 .plum-brush-reveal {
@@ -887,20 +954,90 @@ html.dark .plum-illustration {
   margin-top: 32px;
 }
 
+.catalog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 20px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.catalog-heading h2 {
+  margin: 0;
+  color: var(--title-ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+
+.catalog-heading h2 span {
+  margin-left: 12px;
+  color: var(--text-3);
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.catalog-heading .stage-hint {
+  margin: 12px 0 16px;
+  opacity: 1;
+}
+
+.catalog-overview {
+  display: flex;
+  gap: 24px;
+  margin: 0 0 16px;
+}
+
+.catalog-overview div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.catalog-overview dt {
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.catalog-overview dd {
+  margin: 0;
+  color: var(--zhu);
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.catalog-overview dd span {
+  margin-left: 2px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
 .catalog-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
   gap: 24px;
 }
 
 .slip {
   --lift: 0px;
+  --slip-tilt-x: 0deg;
+  --slip-tilt-y: 0deg;
+  --slip-spot-x: 50%;
+  --slip-spot-y: 35%;
   --slip-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
   isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: minmax(190px, 1fr) auto auto;
+  grid-template-rows: minmax(170px, 1fr) auto auto auto;
   align-items: start;
   gap: 14px;
   min-width: 0;
@@ -909,11 +1046,12 @@ html.dark .plum-illustration {
   writing-mode: horizontal-tb;
   color: var(--card-ink);
   text-decoration: none;
-  background: var(--card-fill);
-  border: 1px solid var(--card-line);
-  border-radius: 0;
-  box-shadow: none;
-  transform: translateY(var(--lift));
+  background: var(--paper-grain), var(--slip-paper);
+  border: 1px solid var(--slip-line);
+  border-radius: 22% 30% 18% 26% / 11% 9% 14% 12%;
+  box-shadow: 0 16px 32px -26px var(--card-shadow);
+  transform: perspective(900px) rotateX(var(--slip-tilt-y)) rotateY(var(--slip-tilt-x)) translateY(var(--lift));
+  transform-style: preserve-3d;
   transition:
     transform 420ms var(--slip-ease),
     box-shadow 420ms var(--slip-ease);
@@ -923,11 +1061,12 @@ html.dark .plum-illustration {
 .slip-aura {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
   clip-path: inset(0);
   pointer-events: none;
   opacity: 0;
+  border-radius: inherit;
   transition: opacity 0.4s ease-out;
 }
 
@@ -935,17 +1074,16 @@ html.dark .plum-illustration {
   content: '';
   position: absolute;
   top: 0;
-  left: 50%;
-  width: 110%;
-  aspect-ratio: 1;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(200, 80, 60, 0.03) 0%, rgba(200, 80, 60, 0) 70%);
+  background: radial-gradient(circle at var(--slip-spot-x) var(--slip-spot-y), rgba(200, 80, 60, 0.06) 0%, rgba(200, 80, 60, 0) 62%);
   filter: none;
-  transform: translate(-50%, -35%);
 }
 
 html.dark .slip-aura::before {
-  background: radial-gradient(circle, rgba(232, 228, 217, 0.045) 0%, rgba(232, 228, 217, 0) 70%);
+  background: radial-gradient(circle at var(--slip-spot-x) var(--slip-spot-y), rgba(232, 228, 217, 0.06) 0%, rgba(232, 228, 217, 0) 62%);
 }
 
 .slip:hover .slip-aura,
@@ -960,6 +1098,7 @@ html.dark .slip-aura::before {
   inset: -1px;
   pointer-events: none;
   border: 0 solid var(--zhu);
+  border-radius: inherit;
   opacity: 0;
 }
 
@@ -976,8 +1115,13 @@ html.dark .slip-aura::before {
 .slip:hover,
 .slip:focus-visible {
   --lift: -4px;
-  border-color: var(--card-line);
-  box-shadow: 0 12px 28px -8px var(--card-shadow);
+  border-color: var(--slip-line);
+  box-shadow: 0 18px 34px -10px var(--card-shadow);
+}
+
+.slip > :not(.slip-aura):not(.slip-seal) {
+  position: relative;
+  z-index: 1;
 }
 
 .slip:hover::before,
@@ -1028,7 +1172,7 @@ html.dark .slip-aura::before {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   font-family: var(--font-brush);
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 400;
   letter-spacing: 0.08em;
   line-height: 1.5;
@@ -1039,7 +1183,7 @@ html.dark .slip-aura::before {
   grid-column: 1 / -1;
   grid-row: 2;
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.05em;
   line-height: 1.8;
@@ -1048,7 +1192,7 @@ html.dark .slip-aura::before {
 
 .slip-duty,
 .slip-latest {
-  opacity: 0.5;
+  opacity: 0.68;
   transition: opacity 420ms var(--slip-ease);
 }
 
@@ -1106,21 +1250,300 @@ html.dark .slip-aura::before {
 .slip-latest {
   grid-column: 1 / -1;
   grid-row: 3;
-  padding-top: 0;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-line);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.05em;
   line-height: 1.8;
-  color: var(--card-ink);
+  color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
 }
 
+.slip-latest-label {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.slip-latest-title {
+  display: block;
+  overflow: hidden;
+  color: var(--card-ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slip-action {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 4;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding-top: 10px;
+  color: var(--zhu);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  opacity: 0.78;
+  transition: opacity 280ms ease, transform 280ms var(--slip-ease);
+}
+
+.slip-action svg {
+  width: 22px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.slip:hover .slip-action,
+.slip:focus-visible .slip-action {
+  opacity: 1;
+  transform: translateX(3px);
+}
+
 html.dark .slip-latest {
   color: #f0ebe0;
+}
+
+.recent-notes {
+  margin-top: 76px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.recent-notes-head {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr) minmax(120px, 0.6fr);
+  align-items: end;
+  gap: 24px;
+}
+
+.recent-notes-kicker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-3);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  writing-mode: vertical-rl;
+}
+
+.recent-notes-seal {
+  width: 30px;
+  height: 36px;
+  color: var(--zhu);
+  background: var(--xuan);
+  box-shadow: inset 0 0 0 1px var(--zhu);
+  font-size: 12px;
+  transform: rotate(-5deg);
+}
+
+.recent-notes-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  color: var(--title-ink);
+}
+
+.recent-notes-head p {
+  margin: 8px 0 0;
+  color: var(--text-3);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.recent-notes-rule {
+  align-self: center;
+  height: 8px;
+  background: var(--wave-rule) repeat-x center;
+  opacity: 0.72;
+}
+
+.recent-notes-list {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 0 28px;
+}
+
+.note-entry {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 44px 108px minmax(0, 1fr) 72px 24px;
+  align-items: center;
+  gap: 18px;
+  min-height: 72px;
+  padding: 12px 4px;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  transition: color 260ms ease, border-color 260ms ease;
+}
+
+.note-entry-featured {
+  grid-row: span 2;
+  grid-template-columns: 44px minmax(0, 1fr) 28px;
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
+  min-height: 198px;
+  padding: 24px 20px;
+  background: var(--paper-grain), var(--slip-paper);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.note-entry-featured .note-index {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  padding-top: 2px;
+}
+
+.note-entry-featured .note-category {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.note-entry-featured .note-body {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+.note-entry-featured .note-date {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.note-entry-featured .note-arrow {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+  align-self: start;
+}
+
+.note-entry:not(.note-entry-featured) {
+  grid-template-columns: 36px 88px minmax(0, 1fr) 24px;
+  min-height: 88px;
+  padding: 12px 4px;
+}
+
+.note-entry:not(.note-entry-featured) .note-index {
+  grid-column: 1;
+}
+
+.note-entry:not(.note-entry-featured) .note-category {
+  grid-column: 2;
+}
+
+.note-entry:not(.note-entry-featured) .note-body {
+  grid-column: 3;
+}
+
+.note-entry:not(.note-entry-featured) .note-date {
+  display: none;
+}
+
+.note-entry:not(.note-entry-featured) .note-arrow {
+  grid-column: 4;
+}
+
+.note-entry::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: -1px;
+  left: 4px;
+  height: 8px;
+  background: var(--wave-rule) repeat-x center;
+  opacity: 0.75;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 420ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.note-entry:hover,
+.note-entry:focus-visible {
+  color: var(--zhu);
+}
+
+.note-entry:hover::after,
+.note-entry:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.note-entry:focus-visible {
+  outline: 2px solid var(--zhu);
+  outline-offset: 4px;
+}
+
+.note-index,
+.note-date {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.note-category {
+  color: var(--text-3);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+
+.note-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: 0.08em;
+}
+
+.note-context {
+  color: var(--text-3);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+
+.note-entry-featured .note-title {
+  font-size: 30px;
+  letter-spacing: 0.12em;
+}
+
+.note-entry-featured .note-context {
+  font-size: 14px;
+}
+
+.note-arrow {
+  color: var(--zhu);
+  font-size: 20px;
+  line-height: 1;
+  text-align: right;
+  transition: transform 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.note-entry:hover .note-arrow,
+.note-entry:focus-visible .note-arrow {
+  transform: translate(3px, -3px);
 }
 
 .stage-colophon {
@@ -1185,6 +1608,50 @@ html.dark .slip-latest {
 .stage.is-in .slip {
   animation: slip-in 560ms ease both;
   animation-delay: calc(var(--i) * 160ms + 480ms);
+}
+
+/* GSAP 接管首屏节奏时，关闭旧的 CSS 入场动画，避免两套时间线相互覆盖。 */
+.stage.gsap-ready .landscape-wash,
+.stage.gsap-ready .plum-illustration.is-loaded .plum-brush-reveal,
+.stage.gsap-ready .plum-illustration.is-loaded .plum-flower-cluster,
+.stage.gsap-ready .brush-col,
+.stage.gsap-ready .brush-mark > span,
+.stage.gsap-ready .stage-kicker,
+.stage.gsap-ready .stage-title,
+.stage.gsap-ready .stage-hint,
+.stage.gsap-ready .slip {
+  animation: none !important;
+}
+
+.stage.gsap-ready .brush-col,
+.stage.gsap-ready .brush-mark > span,
+.stage.gsap-ready .stage-kicker,
+.stage.gsap-ready .stage-title,
+.stage.gsap-ready .stage-hint {
+  opacity: 1;
+}
+
+.stage.gsap-ready .brush-mark > span {
+  clip-path: none;
+}
+
+.stage.gsap-ready .plum-illustration.is-loaded .plum-brush-reveal {
+  visibility: hidden;
+}
+
+/* Hydration 尚未完成时也保留首屏内容，避免部署后的首帧出现空白。 */
+.stage:not(.is-in) .landscape-wash,
+.stage:not(.is-in) .brush-col,
+.stage:not(.is-in) .stage-kicker,
+.stage:not(.is-in) .stage-title,
+.stage:not(.is-in) .stage-hint,
+.stage:not(.is-in) .slip {
+  opacity: 1;
+}
+
+.stage:not(.is-in) .brush-mark > span {
+  opacity: 1;
+  clip-path: inset(-3px);
 }
 
 @keyframes brush-write-in {
@@ -1595,6 +2062,106 @@ html.dark .slip-latest {
     margin-top: 32px;
   }
 
+  .catalog-heading {
+    display: block;
+    margin-bottom: 16px;
+    padding: 0;
+  }
+
+  .catalog-heading h2 {
+    font-size: 19px;
+  }
+
+  .catalog-heading h2 span {
+    display: block;
+    margin: 8px 0 0;
+  }
+
+  .catalog-heading .stage-hint {
+    margin: 12px 0 14px;
+  }
+
+  .catalog-overview {
+    gap: 14px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .recent-notes {
+    margin-top: 56px;
+  }
+
+  .recent-notes-head {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .recent-notes-rule {
+    grid-column: 2;
+    width: 100%;
+  }
+
+  .note-entry {
+    grid-template-columns: 32px minmax(0, 1fr) 20px;
+    gap: 10px;
+    min-height: 64px;
+  }
+
+  .recent-notes-list {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .note-entry-featured {
+    grid-row: auto;
+    grid-template-columns: 32px minmax(0, 1fr) 20px;
+    grid-template-rows: auto 1fr;
+    min-height: 154px;
+    padding: 20px 12px;
+  }
+
+  .note-entry-featured .note-index {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .note-entry-featured .note-category {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .note-entry-featured .note-body {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+  }
+
+  .note-entry-featured .note-arrow {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+
+  .note-entry:not(.note-entry-featured) {
+    grid-template-columns: 32px minmax(0, 1fr) 20px;
+  }
+
+  .note-entry:not(.note-entry-featured) .note-body {
+    grid-column: 2;
+  }
+
+  .note-entry:not(.note-entry-featured) .note-arrow {
+    grid-column: 3;
+  }
+
+  .note-entry-featured .note-title {
+    font-size: 24px;
+  }
+
+  .note-category,
+  .note-date {
+    display: none;
+  }
+
   .catalog-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -1603,6 +2170,7 @@ html.dark .slip-latest {
   .slip {
     min-height: 320px;
     padding: 24px;
+    margin-top: 0;
   }
 
   .slip-name {
@@ -1631,7 +2199,18 @@ html.dark .slip-latest {
     transition: none;
   }
 
+  .note-entry::after,
+  .note-arrow {
+    transition: none;
+  }
+
   .landscape-parallax {
+    transform: none;
+    transition: none;
+  }
+
+  .landscape-atmosphere,
+  .plum-picture {
     transform: none;
     transition: none;
   }

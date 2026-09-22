@@ -1,5 +1,7 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useData, useRoute, useRouter, withBase } from 'vitepress'
 import { data as catalog } from '../../catalog.data.js'
 
@@ -11,6 +13,8 @@ const entered = ref(false)
 const plumLoaded = ref(false)
 const plumImage = ref(null)
 const atmosphereReady = ref(false)
+const gsapReady = ref(false)
+const sceneActive = ref(false)
 const stageElement = ref(null)
 const sceneElement = ref(null)
 let enterFrame
@@ -20,6 +24,18 @@ let pointerPosition = null
 let viewportWidth = 1
 let viewportHeight = 1
 let sceneScale = 1
+let mountainShiftX
+let mountainShiftY
+let plumShiftX
+let plumShiftY
+let mistShiftX
+let mistShiftY
+let gsapContext
+let gsapMedia
+let motionEnabled = false
+let slipMotion = new WeakMap()
+let plumTimeline
+let introTimeline
 
 const NUMERALS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 
@@ -54,9 +70,48 @@ function onPlumLoad() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) atmosphereReady.value = true
 }
 
-function onPlumRevealEnd(event) {
-  if (event.animationName === 'plum-bloom' && event.target.dataset.final === 'true') atmosphereReady.value = true
+watch(plumSource, () => {
+  plumTimeline?.kill()
+  plumTimeline = null
+  plumLoaded.value = false
+  atmosphereReady.value = false
+})
+
+function playPlumReveal() {
+  if (!gsapReady.value || !plumLoaded.value) return
+  const scope = stageElement.value
+  const strokes = Array.from(scope?.querySelectorAll('.plum-brush-reveal') || [])
+  const flowers = Array.from(scope?.querySelectorAll('.plum-flower-cluster') || [])
+  if (!strokes.length || !flowers.length) return
+
+  plumTimeline?.kill()
+  gsap.set(strokes, { visibility: 'visible', strokeDashoffset: 1 })
+  gsap.set(flowers, { opacity: 0 })
+  plumTimeline = gsap.timeline({
+    delay: 0.12,
+    onComplete: () => { atmosphereReady.value = true }
+  })
+
+  plumGrowthStrokes.forEach((stroke, index) => {
+    plumTimeline.to(strokes[index], {
+      strokeDashoffset: 0,
+      duration: Math.max(0.22, stroke.duration * 0.34),
+      ease: 'power2.out'
+    }, stroke.delay * 0.2)
+  })
+
+  plumFlowerClusters.forEach((cluster, index) => {
+    plumTimeline.to(flowers[index], {
+      opacity: 1,
+      duration: 0.38,
+      ease: 'power2.out'
+    }, cluster.delay * 0.2 + 0.35)
+  })
 }
+
+watch([plumLoaded, gsapReady], ([loaded, ready]) => {
+  if (loaded && ready) nextTick(playPlumReveal)
+})
 
 function cn(n) {
   if (n <= 10) return NUMERALS[n]
@@ -100,6 +155,17 @@ const slips = computed(() => [
   }
 ])
 
+const totalNotes = computed(() => slips.value.reduce((total, slip) => total + slip.count, 0))
+
+const recentNotes = computed(() => Object.entries(catalog)
+  .flatMap(([key, pages]) => (pages || []).map((page) => ({
+    ...page,
+    category: key === 'projects' ? '工作项目' : key === 'skills' ? 'Skill 记录' : '工具',
+    context: key === 'projects' ? '从项目现场留下的一页方法' : key === 'skills' ? '可带到下个项目的用法' : '随手收录的工具札记'
+  })))
+  .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+  .slice(0, 3))
+
 function sealText(slip) {
   return slip.count === 0 ? '待' : `${cn(slip.count)}篇`
 }
@@ -107,6 +173,11 @@ function sealText(slip) {
 function open(event, slip) {
   event.preventDefault()
   router.go(slip.href)
+}
+
+function openNote(event, note) {
+  event.preventDefault()
+  router.go(note.url)
 }
 
 function isHome() {
@@ -136,8 +207,27 @@ function renderAtmosphere() {
   const dy = Math.max(-1, Math.min(1, y / viewportHeight * 2 - 1))
   const length = Math.max(1, Math.hypot(dx, dy))
 
-  stage.style.setProperty('--mountain-shift-x', `${-dx / length * 1.5 * sceneScale}px`)
-  stage.style.setProperty('--mountain-shift-y', `${-dy / length * 1.5 * sceneScale}px`)
+  const shiftX = `${-dx / length * 3.2 * sceneScale}px`
+  const shiftY = `${-dy / length * 2.2 * sceneScale}px`
+  const plumX = `${-dx / length * 8 * sceneScale}px`
+  const plumY = `${-dy / length * 4.5 * sceneScale}px`
+  const mistX = `${-dx / length * 4.5 * sceneScale}px`
+  const mistY = `${-dy / length * 2.5 * sceneScale}px`
+  if (mountainShiftX && mountainShiftY) {
+    mountainShiftX(shiftX)
+    mountainShiftY(shiftY)
+    plumShiftX(plumX)
+    plumShiftY(plumY)
+    mistShiftX(mistX)
+    mistShiftY(mistY)
+  } else {
+    stage.style.setProperty('--mountain-shift-x', shiftX)
+    stage.style.setProperty('--mountain-shift-y', shiftY)
+    stage.style.setProperty('--plum-shift-x', plumX)
+    stage.style.setProperty('--plum-shift-y', plumY)
+    stage.style.setProperty('--mist-shift-x', mistX)
+    stage.style.setProperty('--mist-shift-y', mistY)
+  }
 }
 
 function queueAtmosphere() {
@@ -145,9 +235,21 @@ function queueAtmosphere() {
 }
 
 function moveAtmosphere(event) {
-  if (!atmosphereReady.value || !atmosphereMedia?.matches || event.pointerType !== 'mouse') return
+  if (!sceneActive.value || !atmosphereReady.value || !atmosphereMedia?.matches || event.pointerType !== 'mouse') return
   pointerPosition = { x: event.clientX, y: event.clientY }
   queueAtmosphere()
+}
+
+function enterScene(event) {
+  if (event.pointerType !== 'mouse' || !atmosphereMedia?.matches) return
+  sceneActive.value = true
+  moveAtmosphere(event)
+}
+
+function leaveScene(event) {
+  if (event.pointerType !== 'mouse') return
+  sceneActive.value = false
+  resetAtmosphere()
 }
 
 function resetAtmosphere() {
@@ -172,9 +274,146 @@ function measureAtmosphere() {
   resetAtmosphere()
 }
 
+function moveSlip(event) {
+  if (!motionEnabled || event.pointerType !== 'mouse') return
+  const card = event.currentTarget
+  const motion = slipMotion.get(card)
+  if (!motion) return
+  const bounds = card.getBoundingClientRect()
+  const x = (event.clientX - bounds.left) / bounds.width * 2 - 1
+  const y = (event.clientY - bounds.top) / bounds.height * 2 - 1
+  motion.tiltX(`${Math.max(-1, Math.min(1, x)) * 1.4}deg`)
+  motion.tiltY(`${Math.max(-1, Math.min(1, -y)) * 1.1}deg`)
+  motion.spotX(`${(x + 1) * 50}%`)
+  motion.spotY(`${(y + 1) * 50}%`)
+}
+
+function resetSlip(event) {
+  const motion = slipMotion.get(event.currentTarget)
+  if (!motion) return
+  motion.tiltX('0deg')
+  motion.tiltY('0deg')
+  motion.spotX('50%')
+  motion.spotY('35%')
+}
+
+function setupGsap() {
+  gsap.registerPlugin(ScrollTrigger)
+  gsapContext = gsap.context(() => {
+    gsapMedia = gsap.matchMedia()
+    gsapMedia.add('(prefers-reduced-motion: no-preference)', () => {
+      gsapReady.value = true
+
+      introTimeline = gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .fromTo('.brush-col',
+          { autoAlpha: 0, y: 12 },
+          { autoAlpha: 1, y: 0, duration: 0.34 }
+        )
+        .fromTo('.brush-mark > span',
+          { autoAlpha: 0, clipPath: 'inset(0 0 100% 0)', y: -8 },
+          { autoAlpha: 1, clipPath: 'inset(-3px)', y: 0, duration: 0.5, stagger: 0.07 },
+          '-=0.16'
+        )
+        .fromTo('.stage-copy',
+          { autoAlpha: 0, x: 12 },
+          { autoAlpha: 1, x: 0, duration: 0.42 },
+          '-=0.25'
+        )
+        .fromTo('.landscape-wash',
+          { autoAlpha: 0 },
+          { autoAlpha: 1, duration: 0.62, ease: 'power2.out' },
+          '-=0.34'
+        )
+        .fromTo('.landscape-mountains',
+          { autoAlpha: 0, y: 80, scaleY: 0.82 },
+          { autoAlpha: 0.8, y: 55, scaleY: 0.82, duration: 0.46, ease: 'power2.out' },
+          '-=0.3'
+        )
+        .fromTo('.landscape-water > path',
+          { autoAlpha: 0, scaleX: 0.72 },
+          { autoAlpha: 0.75, scaleX: 1, duration: 0.4, stagger: 0.06, ease: 'power2.out' },
+          '-=0.24'
+        )
+        .fromTo('.landscape-mist-breath',
+          { autoAlpha: 0, xPercent: -8 },
+          { autoAlpha: 0.6, xPercent: 0, duration: 0.48, ease: 'power2.out' },
+          '-=0.3'
+        )
+        .fromTo('.plum-picture',
+          { autoAlpha: 0 },
+          { autoAlpha: 1, duration: 0.58, ease: 'power2.out' },
+          '-=0.4'
+        )
+        .fromTo('.catalog-heading',
+          { autoAlpha: 0, y: 10 },
+          { autoAlpha: 1, y: 0, duration: 0.36 },
+          '-=0.25'
+        )
+        .fromTo('.slip',
+          { autoAlpha: 0, y: 14 },
+          { autoAlpha: 1, y: 0, duration: 0.44, stagger: 0.08 },
+          '-=0.16'
+        )
+
+      gsap.timeline({
+        scrollTrigger: {
+          trigger: '.recent-notes',
+          start: 'top 82%',
+          once: true
+        }
+      })
+        .fromTo('.recent-notes-head',
+          { autoAlpha: 0, y: 12 },
+          { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power3.out' }
+        )
+        .fromTo('.note-entry',
+          { autoAlpha: 0, y: 18 },
+          { autoAlpha: 1, y: 0, duration: 0.72, ease: 'power3.out', stagger: 0.12 },
+          '-=0.28'
+        )
+
+      return () => {
+        gsapReady.value = false
+      }
+    })
+
+    gsapMedia.add('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)', () => {
+      motionEnabled = true
+      mountainShiftX = gsap.quickTo(stageElement.value, '--mountain-shift-x', { duration: 0.7, ease: 'power3.out' })
+      mountainShiftY = gsap.quickTo(stageElement.value, '--mountain-shift-y', { duration: 0.7, ease: 'power3.out' })
+      plumShiftX = gsap.quickTo(stageElement.value, '--plum-shift-x', { duration: 0.48, ease: 'power3.out' })
+      plumShiftY = gsap.quickTo(stageElement.value, '--plum-shift-y', { duration: 0.48, ease: 'power3.out' })
+      mistShiftX = gsap.quickTo(stageElement.value, '--mist-shift-x', { duration: 0.62, ease: 'power2.out' })
+      mistShiftY = gsap.quickTo(stageElement.value, '--mist-shift-y', { duration: 0.62, ease: 'power2.out' })
+
+      gsap.utils.toArray('.slip').forEach((card) => {
+        slipMotion.set(card, {
+          tiltX: gsap.quickTo(card, '--slip-tilt-x', { duration: 0.42, ease: 'power3.out' }),
+          tiltY: gsap.quickTo(card, '--slip-tilt-y', { duration: 0.42, ease: 'power3.out' }),
+          spotX: gsap.quickTo(card, '--slip-spot-x', { duration: 0.35, ease: 'power2.out' }),
+          spotY: gsap.quickTo(card, '--slip-spot-y', { duration: 0.35, ease: 'power2.out' })
+        })
+      })
+
+      return () => {
+        motionEnabled = false
+        sceneActive.value = false
+        mountainShiftX = null
+        mountainShiftY = null
+        plumShiftX = null
+        plumShiftY = null
+        mistShiftX = null
+        mistShiftY = null
+        slipMotion = new WeakMap()
+      }
+    })
+  }, stageElement.value)
+}
+
 onMounted(() => {
   if (plumImage.value?.complete && plumImage.value.naturalWidth > 0) onPlumLoad()
   enterFrame = requestAnimationFrame(enter)
+  setupGsap()
   atmosphereMedia = window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)')
   measureAtmosphere()
   atmosphereMedia.addEventListener('change', measureAtmosphere)
@@ -196,12 +435,20 @@ onUnmounted(() => {
   window.removeEventListener('resize', measureAtmosphere)
   document.removeEventListener('visibilitychange', resetAtmosphere)
   window.removeEventListener('keydown', onKeydown)
+  introTimeline?.kill()
+  introTimeline = null
+  plumTimeline?.kill()
+  plumTimeline = null
+  gsapMedia?.revert()
+  gsapContext?.revert()
+  gsapMedia = null
+  gsapContext = null
 })
 </script>
 
 <template>
-  <section ref="stageElement" class="stage" :class="{ 'is-in': entered, 'has-atmosphere': atmosphereReady }">
-    <div ref="sceneElement" class="landscape-scene" aria-hidden="true">
+  <section ref="stageElement" class="stage" :class="{ 'is-in': entered, 'has-atmosphere': atmosphereReady, 'gsap-ready': gsapReady, 'scene-active': sceneActive }">
+    <div ref="sceneElement" class="landscape-scene" aria-hidden="true" @pointerenter="enterScene" @pointerleave="leaveScene">
     <svg class="plum-art" viewBox="0 0 900 450" fill="none" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="home-landscape-sides" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="900" y2="0">
@@ -290,7 +537,7 @@ onUnmounted(() => {
     </svg>
       <div class="plum-picture">
         <img ref="plumImage" class="plum-preload" :src="plumSource" alt="" @load="onPlumLoad" />
-        <svg class="plum-illustration" :class="{ 'is-loaded': plumLoaded }" viewBox="0 103 436 332" aria-hidden="true" focusable="false" @animationend="onPlumRevealEnd">
+        <svg v-if="plumLoaded" class="plum-illustration" :class="{ 'is-loaded': plumLoaded }" viewBox="0 103 436 332" aria-hidden="true" focusable="false">
           <defs>
             <mask id="home-plum-growth" maskUnits="userSpaceOnUse" x="0" y="103" width="436" height="332" style="mask-type: alpha">
               <path v-for="stroke in plumGrowthStrokes" :key="stroke.id" class="plum-brush-reveal" :d="stroke.d" :stroke-width="stroke.width" pathLength="1" :style="{ '--grow-delay': `${stroke.delay}s`, '--grow-duration': `${stroke.duration}s` }" />
@@ -320,11 +567,22 @@ onUnmounted(() => {
         </p>
       </div>
     </header>
-    <p class="stage-hint">
-      按 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 翻阅 · <kbd>/</kbd> 搜索
-    </p>
 
-    <nav class="home-catalog" aria-label="三类入口">
+    <nav class="home-catalog" aria-labelledby="home-catalog-title">
+      <div class="catalog-heading">
+        <div>
+          <h2 id="home-catalog-title">案头所藏 <span>共{{ cn(totalNotes) }}篇手记</span></h2>
+          <p class="stage-hint">
+            按 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 翻阅 · <kbd>/</kbd> 搜索
+          </p>
+        </div>
+        <dl class="catalog-overview" aria-label="各类记录篇数">
+          <div v-for="slip in slips" :key="slip.key">
+            <dt>{{ slip.name }}</dt>
+            <dd>{{ cn(slip.count) }}<span>篇</span></dd>
+          </div>
+        </dl>
+      </div>
       <div class="catalog-grid">
         <a
           v-for="(slip, index) in slips"
@@ -335,6 +593,8 @@ onUnmounted(() => {
           :href="slip.href"
           :aria-keyshortcuts="slip.kbd"
           @click="open($event, slip)"
+          @pointermove="moveSlip"
+          @pointerleave="resetSlip"
         >
           <span class="slip-aura" aria-hidden="true"></span>
           <span class="slip-fishtail" aria-hidden="true"><svg viewBox="0 0 28 48" focusable="false"><path d="M2 1H26L14 14 26 27H2L14 14ZM2 32H26V34H2ZM6 39H22L14 47Z" /></svg></span>
@@ -342,12 +602,49 @@ onUnmounted(() => {
           <span class="slip-duty">{{ slip.duty }}</span>
           <span class="seal slip-seal">{{ sealText(slip) }}</span>
           <span class="slip-latest">
-            <template v-if="slip.count === 0">打开目录补第一篇</template>
-            <template v-else>{{ slip.latest }}</template>
+            <span class="slip-latest-label">{{ slip.count ? '最近记录' : '待添新页' }}</span>
+            <span class="slip-latest-title" :title="slip.latest || '暂无工具记录'">{{ slip.latest || '暂无工具记录' }}</span>
+          </span>
+          <span class="slip-action">
+            <span>翻阅目录</span>
+            <svg viewBox="0 0 24 16" aria-hidden="true" focusable="false"><path d="M1 8H22M15 1L22 8 15 15" /></svg>
           </span>
         </a>
       </div>
     </nav>
+
+    <section v-if="recentNotes.length" class="recent-notes" aria-labelledby="recent-notes-title">
+      <header class="recent-notes-head">
+        <div class="recent-notes-kicker">
+          <span class="seal recent-notes-seal" aria-hidden="true">新札</span>
+          <span>廊下拾得</span>
+        </div>
+        <div>
+          <h2 id="recent-notes-title">近记</h2>
+          <p>最近写下的几页，留在手边。</p>
+        </div>
+        <span class="recent-notes-rule" aria-hidden="true"></span>
+      </header>
+      <div class="recent-notes-list">
+        <a
+          v-for="(note, index) in recentNotes"
+          :key="note.url"
+          :class="['note-entry', { 'note-entry-featured': index === 0 }]"
+          :href="withBase(note.url)"
+          @click="openNote($event, note)"
+        >
+          <span class="note-index">{{ String(index + 1).padStart(2, '0') }}</span>
+          <span class="note-category">{{ note.category }}</span>
+          <span class="note-body">
+            <span class="note-title">{{ note.title }}</span>
+            <span v-if="index === 0" class="note-context">{{ note.context }}</span>
+          </span>
+          <span class="note-date">{{ note.date?.slice(0, 7) }}</span>
+          <span class="note-arrow" aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </section>
+
     <footer class="stage-colophon" aria-label="技藏落款">
       <svg class="brush-rest" viewBox="0 0 160 44" aria-hidden="true" focusable="false"><path d="M8 34Q19 31 28 13Q33 5 39 15L48 29Q54 34 59 24L73 4Q78-2 84 8L98 26Q104 35 111 25L121 14Q128 5 134 17L150 34Z" /><path d="M15 39Q80 35 146 39" fill="none" stroke="currentColor" /></svg>
       <span class="seal seal-colophon">技藏</span>
