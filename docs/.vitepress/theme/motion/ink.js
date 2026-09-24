@@ -17,5 +17,7 @@ export const INK_EASE = {
   // 点厾：笔尖点下后纸张回弹。
   dot: 'back.out(1.5)',
   // 压印：印章落下。
-  press: 'power2.out'
+  press: 'power2.out',
+  // 收锋：墨迹开始时有重量，尾端轻轻回锋。
+  settle: CustomEase.create('inkSettle', 'M0,0 C0.16,0.72 0.22,0.98 0.52,1 0.72,1.01 0.82,0.98 1,1')
 }

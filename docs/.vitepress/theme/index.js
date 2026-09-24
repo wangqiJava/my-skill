@@ -2,6 +2,7 @@ import DefaultTheme from 'vitepress/theme'
 import Layout from './Layout.vue'
 import HomeWorkbench from './components/HomeWorkbench.vue'
 import './style.css'
+import './home-composition.css'
 
 export default {
   extends: DefaultTheme,

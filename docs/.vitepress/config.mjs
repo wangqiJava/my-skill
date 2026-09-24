@@ -99,6 +99,8 @@ export default defineConfig({
     darkModeSwitchLabel: '阴阳',
     lightModeSwitchTitle: '切到阳面（浅色）',
     darkModeSwitchTitle: '切到阴面（深色）',
-    footer: { message: '用过再记下，下次能找回来。' }
+    footer: {
+      message: '用过再记下，下次能找回来。 · <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">苏ICP备2025165449号-2</a>'
+    }
   }
 })

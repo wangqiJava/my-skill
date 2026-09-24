@@ -14,79 +14,82 @@ const RIPPLE_DISTANCE = 16
  * 首屏「题款」时间线。
  * 顺序遵循传统落款：先布景（山、水、雾、梅），再题字，最后钤印。
  * 段与段之间留气口，让纸白先于墨出现。
+ * @param {Element} scope
+ * @param {{ onSettled?: () => void }} [hooks] 落款收笔后的回调，
+ *   外层用它放开常态氛围（水纹、飞鸟、雾的呼吸）。
  */
-export function createHomeIntro(scope) {
-  const intro = gsap.timeline({ defaults: { ease: INK_EASE.stroke } })
-
-  // 0.00–0.28 只有纸。留白是构图的一部分，不急着落墨。
-  intro
-    // 整幅山水先洇出纸面，再由各层分别落墨。
-    .fromTo('.landscape-wash',
-      { autoAlpha: 0 },
-      { autoAlpha: 1, duration: 0.5, ease: INK_EASE.bloom },
-      0.28)
-    .fromTo('.landscape-mountains',
-      { autoAlpha: 0, y: 80, scaleY: 0.82 },
-      { autoAlpha: 0.8, y: 55, scaleY: 0.82, duration: 0.85, ease: INK_EASE.bloom },
-      0.3)
-    // 水纹横扫：先窄后宽，像一笔带过。
-    .fromTo('.landscape-water > path',
-      { autoAlpha: 0, scaleX: 0.72 },
-      { autoAlpha: 0.75, scaleX: 1, duration: 0.6, stagger: 0.07 },
-      0.55)
-    // 雾气洇开，最慢的一层，用来托住前面的墨。
-    .fromTo('.landscape-mist-breath',
-      { autoAlpha: 0, xPercent: -8 },
-      { autoAlpha: 0.6, xPercent: 0, duration: 0.9, ease: INK_EASE.bloom },
-      0.8)
-    .fromTo('.plum-picture',
-      { autoAlpha: 0 },
-      { autoAlpha: 1, duration: 0.5, ease: INK_EASE.bloom },
-      0.9)
-
-  // 2.00 题字：逐字从上向下落墨，每字写成后渗一次墨。
-  intro
-    .fromTo('.brush-col',
-      { autoAlpha: 0 },
-      { autoAlpha: 1, duration: 0.3 },
-      2.0)
-    .fromTo('.brush-mark > span',
-      { autoAlpha: 0, clipPath: 'inset(0 0 100% 0)' },
-      { autoAlpha: 1, clipPath: 'inset(-3px)', duration: 0.42, stagger: 0.07 },
-      2.05)
-
-  gsap.utils.toArray('.brush-mark > span', scope).forEach((char, index) => {
-    const written = 2.05 + index * 0.07 + 0.3
-    intro
-      .to(char, { '--ink-bleed': 1, duration: 0.12, ease: 'power2.out' }, written)
-      .to(char, { '--ink-bleed': 0, duration: 0.55, ease: 'power2.out' }, written + 0.12)
+export function createHomeIntro(scope, { onSettled } = {}) {
+  const select = (selector) => gsap.utils.toArray(selector, scope)
+  const drop = scope.querySelector('.hero-ink-drop')
+  const title = select('.brush-mark > span')
+  const copy = select('.stage-kicker, .stage-title-a, .stage-title-b, .stage-inscription span')
+  const seals = select('.brush-col .seal, .kicker-col .seal')
+  const cards = select('.slip')
+  const intro = gsap.timeline({
+    defaults: { ease: INK_EASE.stroke },
+    onComplete: onSettled
   })
 
-  // 2.60 钤印，气口前的一段静默。
+  // 一滴浓墨落在空纸上；扩散至边缘时，远山才从纸纤维间显出来。
   intro
-    .fromTo('.brush-col .seal',
-      { autoAlpha: 0, scale: 1.12, rotate: -10 },
-      { autoAlpha: 1, scale: 1, rotate: -6, duration: 0.22, ease: INK_EASE.press },
-      2.6)
-    .fromTo('.brush-col .seal',
-      { boxShadow: '0 0 0px rgb(196 58 58 / 42%)' },
-      { boxShadow: '0 0 16px rgb(196 58 58 / 0%)', duration: 0.5, ease: 'power2.out' },
-      2.66)
+    .fromTo(drop,
+      { autoAlpha: 1, scale: 0.12 },
+      { scale: 24, autoAlpha: 0, duration: 0.86, ease: INK_EASE.bloom },
+      0.34)
+    .fromTo('.landscape-wash',
+      { autoAlpha: 0, clipPath: 'inset(0 0 42% 0)' },
+      { autoAlpha: 1, clipPath: 'inset(0)', duration: 1.45, ease: INK_EASE.bloom },
+      0.62)
+    .fromTo('.landscape-mountains',
+      { autoAlpha: 0, y: 36 },
+      { autoAlpha: 0.82, y: 0, duration: 1.32, ease: INK_EASE.bloom },
+      0.76)
+    .fromTo('.landscape-mist-breath',
+      { autoAlpha: 0, xPercent: -4 },
+      { autoAlpha: 0.58, xPercent: 0, duration: 1.5, ease: INK_EASE.bloom },
+      1.08)
+    .fromTo('.landscape-water > path',
+      { autoAlpha: 0, scaleX: 0.86 },
+      { autoAlpha: 0.72, scaleX: 1, duration: 0.72, stagger: 0.08 },
+      1.38)
+    .fromTo('.brush-col',
+      { autoAlpha: 0 },
+      { autoAlpha: 1, duration: 0.2 },
+      1.92)
+    .fromTo(title,
+      { autoAlpha: 1, clipPath: 'inset(0 100% 0 0)' },
+      { autoAlpha: 1, clipPath: 'inset(-4px)', duration: 0.72, stagger: 0.13, ease: INK_EASE.settle },
+      2.0)
 
-  // 2.85 副题与目录：纸片依次落位，落位后交还给 CSS 的悬浮倾斜。
+  title.forEach((char, index) => {
+    const written = 2 + index * 0.13 + 0.42
+    intro
+      .to(char, { '--ink-bleed': 1, duration: 0.16, ease: 'power2.out' }, written)
+      .to(char, { '--ink-bleed': 0, duration: 0.7, ease: INK_EASE.bloom }, written + 0.16)
+  })
+
+  // 主标题落定后再题副文，最后落下朱印。
   intro
-    .fromTo('.stage-copy',
-      { autoAlpha: 0, x: 12 },
-      { autoAlpha: 1, x: 0, duration: 0.42 },
-      2.85)
+    .fromTo(copy,
+      { autoAlpha: 0, y: 8 },
+      { autoAlpha: 1, y: 0, duration: 0.44, stagger: 0.09, ease: INK_EASE.stroke },
+      2.76)
+    .fromTo('.stage-title',
+      { autoAlpha: 0 },
+      { autoAlpha: 1, duration: 0.2 },
+      2.73)
+    .fromTo(seals,
+      { autoAlpha: 0, scale: 0.76, rotate: -8 },
+      { autoAlpha: 1, scale: 1, rotate: -3, duration: 0.36, stagger: 0.14, ease: INK_EASE.press },
+      3.08)
     .fromTo('.catalog-heading',
-      { autoAlpha: 0, y: 10 },
-      { autoAlpha: 1, y: 0, duration: 0.36 },
-      2.9)
-    .fromTo('.slip',
-      { autoAlpha: 0, y: 12, rotate: 0.6 },
-      { autoAlpha: 1, y: 0, rotate: 0, duration: 0.44, stagger: 0.09, clearProps: 'transform' },
-      3.05)
+      { autoAlpha: 0, clipPath: 'inset(0 100% 0 0)' },
+      { autoAlpha: 1, clipPath: 'inset(0)', duration: 0.58, ease: INK_EASE.stroke },
+      3.28)
+    .fromTo(cards,
+      { autoAlpha: 0, y: 16, clipPath: 'inset(0 0 100% 0)' },
+      { autoAlpha: 1, y: 0, clipPath: 'inset(0)', duration: 0.68, stagger: 0.12, ease: INK_EASE.stroke },
+      3.48)
 
   const loops = []
   let ambientStarted = false
@@ -136,14 +139,11 @@ export function createHomeIntro(scope) {
       .to(wings, { scaleY: 0.85, rotate: -3, duration: 1.008 }))
   })
 
-  // 按屏幅裁剪：窄屏不做全屏模糊、少开两道水纹，并整体加快一档。
+  // 按屏幅裁剪：窄屏少开水纹，并整体加快一档；山水不做持续或全屏模糊。
   const waterPaths = gsap.utils.toArray('.landscape-water > path', scope)
   const media = gsap.matchMedia()
 
   media.add('(min-width: 641px)', () => {
-    gsap.fromTo('.landscape-mountains',
-      { filter: 'blur(10px)' },
-      { filter: 'blur(0px)', duration: 0.85, delay: 0.3, ease: INK_EASE.bloom, clearProps: 'filter' })
     const built = waterPaths.map((path, index) => register(buildRipple(path, index)))
     return () => {
       built.forEach((loop) => {
