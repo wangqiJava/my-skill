@@ -1,5 +1,6 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { INK_SPRITE_CONFIG, createInkSprite, isInkSpriteReady, preloadInkSprite } from './inkSprite.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -158,64 +159,113 @@ export function createInkCardInteractions(scope) {
   const media = window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)')
   if (!media.matches) return () => {}
 
-  const cards = Array.from(scope.querySelectorAll('.slip'))
+  const cards = Array.from(scope.querySelectorAll('.slip-projects'))
   const cleanups = []
+  const maxWetFrame = 14
+  const diffusionEase = (progress) => {
+    if (progress <= 0.3) return progress / 0.3 * 0.42
+    const tail = (progress - 0.3) / 0.7
+    return 0.42 + (1 - Math.pow(1 - tail, 1.75)) * 0.58
+  }
 
   cards.forEach((card) => {
-    const title = card.querySelector('.slip-name')
-    const number = card.querySelector('.slip-number')
-    const count = card.querySelector('.slip-count')
-    const description = card.querySelector('.slip-duty')
-    const setX = gsap.quickTo(card, '--ink-x', { duration: 0.46, ease: 'power3.out' })
-    const setY = gsap.quickTo(card, '--ink-y', { duration: 0.46, ease: 'power3.out' })
-    const setRadius = gsap.quickTo(card, '--ink-radius', { duration: 0.62, ease: 'power2.out' })
-    let leaveTween
+    const wetLayer = card.querySelector('.slip-art-wet')
+    const hoverSprite = createInkSprite({ mount: card, className: 'slip-ink-sprite' })
+    let fadeTimer
+    let wetTween
+    let maskMetrics
+    let disposed = false
 
-    const onMove = (event) => {
-      const bounds = card.getBoundingClientRect()
-      const x = Math.max(0, Math.min(100, (event.clientX - bounds.left) / bounds.width * 100))
-      const y = Math.max(0, Math.min(100, (event.clientY - bounds.top) / bounds.height * 100))
-      setX(`${x}%`)
-      setY(`${y}%`)
+    const setMaskFrame = (frame) => {
+      if (!wetLayer || !maskMetrics) return
+      const col = frame % INK_SPRITE_CONFIG.cols
+      const row = Math.floor(frame / INK_SPRITE_CONFIG.cols)
+      const left = maskMetrics.x - maskMetrics.cellWidth / 2 - col * maskMetrics.cellWidth
+      const top = maskMetrics.y - maskMetrics.cellHeight / 2 - row * maskMetrics.cellHeight
+      const position = `${left}px ${top}px, 0 0, 0 0`
+      wetLayer.style.webkitMaskPosition = position
+      wetLayer.style.maskPosition = position
     }
+
+    const setMaskMetrics = (bounds, x, y) => {
+      if (!wetLayer) return
+      const spread = Math.min(0.92, Math.max(0.7, bounds.width / 430))
+      const cellSize = bounds.width * spread
+      const cellWidth = cellSize
+      const cellHeight = cellSize
+      maskMetrics = { x, y, cellWidth, cellHeight }
+      wetLayer.style.setProperty('--ink-fallback-x', `${x}px`)
+      wetLayer.style.setProperty('--ink-fallback-y', `${y}px`)
+      const size = `${cellWidth * INK_SPRITE_CONFIG.cols}px ${cellHeight * INK_SPRITE_CONFIG.rows}px, 100% 100%, 100% 100%`
+      wetLayer.style.webkitMaskSize = size
+      wetLayer.style.maskSize = size
+      setMaskFrame(0)
+    }
+
     const onEnter = (event) => {
-      leaveTween?.kill()
+      window.clearTimeout(fadeTimer)
+      wetTween?.kill()
+      const bounds = card.getBoundingClientRect()
+      const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left))
+      const y = Math.max(0, Math.min(bounds.height, event.clientY - bounds.top))
       card.classList.add('is-ink-hover')
-      onMove(event)
-      setRadius('145px')
-      gsap.to(card, { '--ink-strength': 1, duration: 0.42, ease: 'power2.out', overwrite: true })
-      gsap.to([number, count, title, description].filter(Boolean), {
-        x: (index) => [3, 4, 6, 9][index] || 0,
-        duration: 0.58,
-        ease: 'power2.out',
-        stagger: 0.035,
-        overwrite: true
-      })
+      setMaskMetrics(bounds, x, y)
+      hoverSprite
+        ?.setPosition(x, y)
+        .setScale(1)
+        .setRotation('0deg')
+        .reset()
+      if (wetLayer) {
+        wetLayer.classList.toggle('is-mask-fallback', !isInkSpriteReady())
+        gsap.set(wetLayer, { opacity: 0, filter: 'grayscale(0.24) contrast(1.03) brightness(0.96) saturate(0.82)' })
+        wetTween = gsap.to(wetLayer, {
+          opacity: 0.94,
+          filter: 'grayscale(0.06) contrast(1.22) brightness(0.9) saturate(0.92)',
+          duration: 0.28,
+          ease: 'power2.out',
+          overwrite: true
+        })
+      }
+      if (hoverSprite) {
+        preloadInkSprite().then((ready) => {
+          if (ready && !disposed) wetLayer?.classList.remove('is-mask-fallback')
+        })
+        hoverSprite.play({
+          duration: 780,
+          ease: diffusionEase,
+          onUpdate: (_, frame) => setMaskFrame(Math.min(maxWetFrame, Math.round(frame * maxWetFrame / (INK_SPRITE_CONFIG.frameCount - 1))))
+        })
+      }
     }
     const onLeave = () => {
       card.classList.remove('is-ink-hover')
-      leaveTween = gsap.to(card, { '--ink-strength': 0, duration: 0.7, ease: 'power1.out', overwrite: true })
-      gsap.to([number, count, title, description].filter(Boolean), {
-        x: 0,
-        duration: 0.44,
-        ease: 'power2.out',
-        stagger: 0.025,
-        overwrite: true
-      })
-      setX('50%')
-      setY('50%')
-      setRadius('0px')
+      window.clearTimeout(fadeTimer)
+      fadeTimer = window.setTimeout(() => {
+        if (!wetLayer) return
+        wetTween?.kill()
+        wetTween = gsap.to(wetLayer, {
+          opacity: 0,
+          filter: 'grayscale(0.24) contrast(1.03) brightness(0.96) saturate(0.82)',
+          duration: 0.52,
+          ease: 'power2.out',
+          overwrite: true,
+          onComplete: () => hoverSprite?.stop()
+        })
+      }, 150)
     }
 
-    card.addEventListener('pointermove', onMove, { passive: true })
     card.addEventListener('pointerenter', onEnter, { passive: true })
     card.addEventListener('pointerleave', onLeave, { passive: true })
     cleanups.push(() => {
-      card.removeEventListener('pointermove', onMove)
+      disposed = true
+      window.clearTimeout(fadeTimer)
       card.removeEventListener('pointerenter', onEnter)
       card.removeEventListener('pointerleave', onLeave)
-      leaveTween?.kill()
-      gsap.killTweensOf([card, number, count, title, description].filter(Boolean))
+      wetTween?.kill()
+      if (hoverSprite) {
+        hoverSprite.stop()
+        hoverSprite.destroy()
+      }
     })
   })
 
