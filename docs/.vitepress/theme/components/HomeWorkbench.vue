@@ -297,8 +297,6 @@ function moveSlip(event) {
   const y = (event.clientY - bounds.top) / bounds.height * 2 - 1
   motion.tiltX(`${Math.max(-1, Math.min(1, x)) * 1.4}deg`)
   motion.tiltY(`${Math.max(-1, Math.min(1, -y)) * 1.1}deg`)
-  motion.spotX(`${(x + 1) * 50}%`)
-  motion.spotY(`${(y + 1) * 50}%`)
 }
 
 function resetSlip(event) {
@@ -306,8 +304,6 @@ function resetSlip(event) {
   if (!motion) return
   motion.tiltX('0deg')
   motion.tiltY('0deg')
-  motion.spotX('50%')
-  motion.spotY('35%')
 }
 
 function setupGsap() {
@@ -355,9 +351,7 @@ function setupGsap() {
       gsap.utils.toArray('.slip').forEach((card) => {
         slipMotion.set(card, {
           tiltX: gsap.quickTo(card, '--slip-tilt-x', { duration: 0.42, ease: 'power3.out' }),
-          tiltY: gsap.quickTo(card, '--slip-tilt-y', { duration: 0.42, ease: 'power3.out' }),
-          spotX: gsap.quickTo(card, '--slip-spot-x', { duration: 0.35, ease: 'power2.out' }),
-          spotY: gsap.quickTo(card, '--slip-spot-y', { duration: 0.35, ease: 'power2.out' })
+          tiltY: gsap.quickTo(card, '--slip-tilt-y', { duration: 0.42, ease: 'power3.out' })
         })
       })
 
@@ -562,7 +556,6 @@ onUnmounted(() => {
           @pointermove="moveSlip"
           @pointerleave="resetSlip"
         >
-          <span class="slip-aura" aria-hidden="true"></span>
           <span class="slip-fishtail" aria-hidden="true"><svg viewBox="0 0 28 48" focusable="false"><path d="M2 1H26L14 14 26 27H2L14 14ZM2 32H26V34H2ZM6 39H22L14 47Z" /></svg></span>
           <span class="slip-name">{{ slip.name }}</span>
           <span class="slip-duty">{{ slip.duty }}</span>

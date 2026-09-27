@@ -1131,8 +1131,6 @@ html.dark .stage.scene-active .plum-illustration {
   --lift: 0px;
   --slip-tilt-x: 0deg;
   --slip-tilt-y: 0deg;
-  --slip-spot-x: 50%;
-  --slip-spot-y: 35%;
   --slip-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
   isolation: isolate;
@@ -1157,87 +1155,6 @@ html.dark .stage.scene-active .plum-illustration {
     transform 420ms var(--slip-ease),
     box-shadow 420ms var(--slip-ease);
   opacity: 0;
-}
-
-.slip-aura {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  clip-path: inset(0);
-  pointer-events: none;
-  opacity: 0;
-  border-radius: inherit;
-  /* 从光斑处洇开：缩放起点跟随指针，落位后 origin 不再起作用。 */
-  transform: scale(0.82);
-  transform-origin: var(--slip-spot-x) var(--slip-spot-y);
-  transition:
-    opacity 0.55s var(--slip-ease),
-    transform 0.55s var(--slip-ease);
-}
-
-.slip-aura::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  /* 多档衰减加轻微模糊，让墨晕没有可辨认的边界。 */
-  background: radial-gradient(
-    circle at var(--slip-spot-x) var(--slip-spot-y),
-    rgba(200, 80, 60, 0.05) 0%,
-    rgba(200, 80, 60, 0.03) 32%,
-    rgba(200, 80, 60, 0.012) 55%,
-    rgba(200, 80, 60, 0) 78%
-  );
-  filter: blur(8px);
-}
-
-html.dark .slip-aura::before {
-  background: radial-gradient(
-    circle at var(--slip-spot-x) var(--slip-spot-y),
-    rgba(232, 228, 217, 0.05) 0%,
-    rgba(232, 228, 217, 0.03) 32%,
-    rgba(232, 228, 217, 0.012) 55%,
-    rgba(232, 228, 217, 0) 78%
-  );
-}
-
-/* 落墨：hover 瞬间在指针落点绽开一滴朱砂墨，随即渗散进纸里。 */
-.slip-aura::after {
-  content: '';
-  position: absolute;
-  left: var(--slip-spot-x);
-  top: var(--slip-spot-y);
-  width: 46%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(196 58 58 / 22%) 0%, rgb(196 58 58 / 9%) 42%, transparent 70%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-html.dark .slip-aura::after {
-  background: radial-gradient(circle, rgb(232 228 217 / 14%) 0%, rgb(232 228 217 / 6%) 42%, transparent 70%);
-}
-
-.slip:hover .slip-aura::after,
-.slip:focus-visible .slip-aura::after {
-  animation: slip-ink-drop 700ms var(--slip-ease) both;
-}
-
-@keyframes slip-ink-drop {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.12); }
-  30% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.5); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15); }
-}
-
-.slip:hover .slip-aura,
-.slip:focus-visible .slip-aura {
-  opacity: 1;
-  transform: scale(1);
 }
 
 /* 朱砂描边用 clip-path 过渡而非 keyframes：入场按笔顺描出，离场按相反笔顺收回。 */
@@ -1274,7 +1191,7 @@ html.dark .slip-aura::after {
   box-shadow: 0 18px 34px -10px var(--card-shadow);
 }
 
-.slip > :not(.slip-aura):not(.slip-seal) {
+.slip > :not(.slip-seal) {
   position: relative;
   z-index: 1;
 }
@@ -1336,14 +1253,6 @@ html.dark .slip-aura::after {
 .slip-duty,
 .slip-latest {
   opacity: 0.68;
-  transition: opacity 420ms var(--slip-ease);
-}
-
-.slip:hover .slip-duty,
-.slip:hover .slip-latest,
-.slip:focus-visible .slip-duty,
-.slip:focus-visible .slip-latest {
-  opacity: 1;
 }
 
 .slip-seal {
@@ -1358,20 +1267,6 @@ html.dark .slip-aura::after {
   background: var(--xuan);
   box-shadow: inset 0 0 0 1px var(--zhu);
   transform: rotate(-4deg);
-  filter: drop-shadow(0 0 0 rgb(196 58 58 / 0%));
-  transition: filter 420ms var(--slip-ease);
-}
-
-.slip:hover .slip-seal,
-.slip:focus-visible .slip-seal {
-  animation: slip-seal-press 420ms var(--slip-ease) both;
-  filter: drop-shadow(0 1px 2px rgb(196 58 58 / 18%));
-}
-
-@keyframes slip-seal-press {
-  0% { transform: rotate(-4deg) scale(1); }
-  40% { transform: rotate(-4deg) scale(1.05); }
-  100% { transform: rotate(-4deg) scale(0.98); }
 }
 
 .slip:nth-child(2) .slip-seal {
@@ -1436,7 +1331,6 @@ html.dark .slip-aura::after {
   font-size: 12px;
   letter-spacing: 0.12em;
   opacity: 0.78;
-  transition: opacity 280ms ease, transform 280ms var(--slip-ease);
 }
 
 .slip-action svg {
@@ -1447,12 +1341,6 @@ html.dark .slip-aura::after {
   stroke-width: 1;
 }
 
-.slip:hover .slip-action,
-.slip:focus-visible .slip-action {
-  opacity: 1;
-  transform: translateX(5px);
-}
-
 /* 空笺降噪：待添新页的卡保持安静，把视线让给有内容的纸笺；悬停时仍给出完整反馈。 */
 .slip.empty .slip-fishtail {
   opacity: 0.35;
@@ -1460,11 +1348,6 @@ html.dark .slip-aura::after {
 
 .slip.empty .slip-action {
   opacity: 0.45;
-}
-
-.slip.empty:hover .slip-action,
-.slip.empty:focus-visible .slip-action {
-  opacity: 1;
 }
 
 html.dark .slip-latest {
@@ -2378,10 +2261,6 @@ html.dark .slip-latest {
     opacity: 1;
     stroke-dashoffset: 0;
     visibility: visible;
-  }
-
-  .slip-aura {
-    transition: none;
   }
 
   .note-entry::after,

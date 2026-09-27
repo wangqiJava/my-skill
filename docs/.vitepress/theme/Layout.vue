@@ -208,10 +208,10 @@ onUnmounted(() => {
         type="button"
         class="yin-yang"
         :aria-pressed="isDark"
-        :aria-label="isDark ? '切到阳面（浅色）' : '切到阴面（深色）'"
-        :title="isDark ? '切到阳面（浅色）' : '切到阴面（深色）'"
+        :aria-label="isDark ? '切到明（浅色）' : '切到暗（深色）'"
+        :title="isDark ? '切到明（浅色）' : '切到暗（深色）'"
       >
-        <span class="yin-yang-mark">{{ isDark ? '阴' : '阳' }}</span>
+        <span class="yin-yang-mark">{{ isDark ? '暗' : '明' }}</span>
       </button>
     </template>
   </Layout>
