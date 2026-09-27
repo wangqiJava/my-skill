@@ -6,7 +6,6 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { INK_EASE } from './motion/ink.js'
 import { createDocMotion } from './motion/docMotion.js'
-import InkCursor from './components/InkCursor.vue'
 
 const { Layout } = DefaultTheme
 const { isDark, page } = useData()
@@ -23,7 +22,7 @@ function prefersReducedMotion() {
 
 // 以 DOM 判断，路由钩子触发时 page 数据可能还没换过来。
 function isDocPage() {
-  return page.value.relativePath !== 'index.md' && Boolean(document.querySelector('.vp-doc'))
+  return Boolean(document.querySelector('.vp-doc'))
 }
 
 function setupDocMotion() {
@@ -33,57 +32,41 @@ function setupDocMotion() {
   docMotion = createDocMotion()
 }
 
-/**
- * 导航压边：滚动位置折算成两个进度写进 CSS 变量，
- * 样式表再据此算出纸的浓度、底缘毛边与水纹宽度（见 theme/style.css）。
- * 分两拍是刻意的：前段「铺纸」先落，后段「收锋」再慢慢把纸压匀，
- * 于是刚滚动时纸已经够看，继续滚下去还有变化可等。
- */
-const NAV_BEATS = [
-  { name: '--nav-ink', from: 0, to: 128, duration: 0.34 },
-  { name: '--nav-settle', from: 128, to: 380, duration: 0.62 }
-]
+// 窄屏上全页模糊代价太高，只留淡入淡出。
+function useInkBlur() {
+  return window.matchMedia('(min-width: 641px)').matches
+}
 
-const navBeats = NAV_BEATS.map((beat) => ({ beat, state: { value: 1 } }))
-let navFrame = 0
-
-function applyNavInk(immediate) {
-  // 只有首页的导航盖在画上；变量也写在导航栏本身而不是 <html>，
-  // 把这一帧的样式重算圈在那一小片区域里。
-  const vessel = document.querySelector('.station-home .VPNavBar')
-  if (!vessel) return
-
-  const y = window.scrollY || 0
-  const instant = immediate || prefersReducedMotion()
-
-  navBeats.forEach(({ beat, state }) => {
-    const progress = Math.min(1, Math.max(0, (y - beat.from) / (beat.to - beat.from)))
-    if (Math.abs(progress - state.value) < 0.0005) return
-    if (instant) {
-      gsap.killTweensOf(state)
-      state.value = progress
-      vessel.style.setProperty(beat.name, progress.toFixed(4))
-      return
-    }
-    gsap.to(state, {
-      value: progress,
-      duration: beat.duration,
-      ease: INK_EASE.stroke,
-      overwrite: true,
-      onUpdate() {
-        // 行笔缓动收笔会略过冲，钳一道，免得颜色算出负透明度。
-        vessel.style.setProperty(beat.name, Math.min(1, Math.max(0, state.value)).toFixed(4))
-      }
-    })
+// 转场洗墨：旧页墨沉下去，新页从纸里洇出来。
+function inkOut() {
+  const shell = document.querySelector('.VPContent')
+  if (!shell || prefersReducedMotion()) return
+  gsap.killTweensOf(shell)
+  gsap.to(shell, {
+    autoAlpha: 0,
+    filter: useInkBlur() ? 'blur(2px)' : 'blur(0px)',
+    duration: 0.22,
+    ease: 'power2.in'
   })
 }
 
-function onNavScroll() {
-  if (navFrame) return
-  navFrame = requestAnimationFrame(() => {
-    navFrame = 0
-    applyNavInk(false)
-  })
+function inkIn() {
+  const shell = document.querySelector('.VPContent')
+  if (!shell) return
+  gsap.killTweensOf(shell)
+  if (prefersReducedMotion()) {
+    gsap.set(shell, { clearProps: 'all' })
+    return
+  }
+  gsap.fromTo(shell,
+    { autoAlpha: 0, filter: useInkBlur() ? 'blur(4px)' : 'blur(0px)' },
+    {
+      autoAlpha: 1,
+      filter: 'blur(0px)',
+      duration: 0.45,
+      ease: INK_EASE.bloom,
+      clearProps: 'filter'
+    })
 }
 
 const pagePetals = [
@@ -175,13 +158,13 @@ onMounted(() => {
   appearanceElement = appearanceButton.value
   appearanceElement?.addEventListener('click', toggleAppearance)
   window.addEventListener('keydown', onKeydown)
-  window.addEventListener('scroll', onNavScroll, { passive: true })
-  applyNavInk(true)
-  router.onAfterRouteChange = async () => {
-    await nextTick()
-    setupDocMotion()
-    ScrollTrigger.refresh()
-    applyNavInk(true)
+  router.onBeforeRouteChange = () => { inkOut() }
+  router.onAfterRouteChange = () => {
+    nextTick(() => {
+      setupDocMotion()
+      ScrollTrigger.refresh()
+      inkIn()
+    })
   }
   nextTick(setupDocMotion)
 })
@@ -190,10 +173,7 @@ onUnmounted(() => {
   appearanceElement?.removeEventListener('click', toggleAppearance)
   appearanceTransition?.skipTransition()
   window.removeEventListener('keydown', onKeydown)
-  window.removeEventListener('scroll', onNavScroll)
-  if (navFrame) cancelAnimationFrame(navFrame)
-  navFrame = 0
-  navBeats.forEach(({ state }) => gsap.killTweensOf(state))
+  router.onBeforeRouteChange = undefined
   router.onAfterRouteChange = undefined
   docMotion?.revert()
   docMotion = null
@@ -204,7 +184,6 @@ onUnmounted(() => {
 <template>
   <Layout class="station-shell" :class="{ 'station-home': !page.isNotFound && page.relativePath === 'index.md' }">
     <template #layout-bottom>
-      <InkCursor />
       <div v-if="page.isNotFound || page.relativePath !== 'index.md'" class="page-plum-fall" aria-hidden="true">
         <span
           v-for="(petal, index) in pagePetals"

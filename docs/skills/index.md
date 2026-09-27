@@ -13,4 +13,6 @@ description: 不绑死某一个工作项目的通用 Skill。
 
 ## 目录
 
+- [archify](./archify.md)
 - [grill-me](./grill-me.md)
+- [frontend-design](./frontend-design.md)

@@ -45,7 +45,9 @@ export default defineConfig({
         text: 'Skill 记录',
         items: [
           { text: '目录', link: '/skills/' },
-          { text: 'grill-me', link: '/skills/grill-me' }
+          { text: 'archify', link: '/skills/archify' },
+          { text: 'grill-me', link: '/skills/grill-me' },
+          { text: 'frontend-design', link: '/skills/frontend-design' }
         ]
       },
       {
@@ -100,7 +102,7 @@ export default defineConfig({
     lightModeSwitchTitle: '切到阳面（浅色）',
     darkModeSwitchTitle: '切到阴面（深色）',
     footer: {
-      message: '用过再记下，下次能找回来。 · <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">苏ICP备2025165449号-2</a>'
+      message: '用过再记下，下次能找回来。 · <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">苏ICP备2025165449号-2</a> · <a href="https://beian.mps.gov.cn/#/query/webSearch?code=32050602014706" target="_blank" rel="noreferrer">苏公网安备32050602014706号</a>'
     }
   }
 })
