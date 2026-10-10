@@ -593,7 +593,8 @@ html.dark .page-plum-fall {
   opacity: 0.5;
 }
 
-html.dark .station-home .landscape-scene::before {
+html.dark .station-home .landscape-scene::before,
+html.dark .station-home .landscape-scene::after {
   opacity: 0;
 }
 
