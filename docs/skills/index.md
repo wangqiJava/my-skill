@@ -16,3 +16,4 @@ description: 不绑死某一个工作项目的通用 Skill。
 - [archify](./archify.md)
 - [grill-me](./grill-me.md)
 - [frontend-design](./frontend-design.md)
+- [text-to-cad](./text-to-cad.md)

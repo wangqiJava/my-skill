@@ -12,4 +12,4 @@ description: 编辑器、模型、MCP 等运行 AI 工作的产品。
 
 ## 目录
 
-还没有条目。补第一篇时，在 `docs/tools/` 新建 Markdown，并在本页和 `docs/.vitepress/config.mjs` 侧栏加上链接。
+- [Multica](./multica.md)

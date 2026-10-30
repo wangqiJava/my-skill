@@ -47,13 +47,15 @@ export default defineConfig({
           { text: '目录', link: '/skills/' },
           { text: 'archify', link: '/skills/archify' },
           { text: 'grill-me', link: '/skills/grill-me' },
-          { text: 'frontend-design', link: '/skills/frontend-design' }
+          { text: 'frontend-design', link: '/skills/frontend-design' },
+          { text: 'text-to-cad', link: '/skills/text-to-cad' }
         ]
       },
       {
         text: 'AI 工具',
         items: [
-          { text: '目录', link: '/tools/' }
+          { text: '目录', link: '/tools/' },
+          { text: 'Multica', link: '/tools/multica' }
         ]
       },
       {
